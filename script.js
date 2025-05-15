@@ -8,7 +8,7 @@ window.addEventListener('resize', () => { // 5
   canvas.height = window.innerHeight; // 7
 }); // 8
 
-// ===== 영어 문장 리스트 (100개 예시, 7~9단어) ===== // 9
+// ===== 영어 문장 리스트 (7~9단어, 예시) ===== // 9
 const sentences = [ // 10
   "I can’t believe how fast time goes by.", // 11
   "What do you usually do on weekends?", // 12
@@ -85,226 +85,226 @@ function startFireworks(sentence, fx, fy) { // 67
 
   const N = partsArr.length; // 77
   const angleStep = (Math.PI * 2) / N; // 78
-  const baseRadius = 80; // 79
-  const maxRadius = 210; // 80
+  // 반지름 20% 더 줄임 // 79
+  const baseRadius = 51.2; // 80
+  const maxRadius = 134.4; // 81
 
-  fireworks = []; // 81
-  fireworksState = { // 82
-    t: 0, // 83
-    phase: "explode", // 84
-    holdDuration: 60, // 85
-    explodeDuration: 180, // 86
-    gatherDuration: 45, // 87
-    originX: fx, // 88
-    originY: fy // 89
-  }; // 90
+  fireworks = []; // 82
+  fireworksState = { // 83
+    t: 0, // 84
+    phase: "explode", // 85
+    holdDuration: 60, // 86
+    explodeDuration: 180, // 87
+    gatherDuration: 45, // 88
+    originX: fx, // 89
+    originY: fy // 90
+  }; // 91
 
-  for (let j = 0; j < N; j++) { // 91
-    const angle = angleStep * j; // 92
-    fireworks.push({ // 93
-      text: partsArr[j].word, // 94
-      angle: angle, // 95
-      row: partsArr[j].row, // 96
-      x: fx, // 97
-      y: fy, // 98
-      radius: baseRadius, // 99
-      maxRadius: maxRadius, // 100
-      arrived: false, // 101
-      targetX: canvas.width / 2, // 102
-      targetY: canvas.height / 2 + (partsArr[j].row - (totalLines - 1) / 2) * 40 // 103
-    }); // 104
-  } // 105
-  sentenceActive = true; // 106
-  centerAlpha = 1.0; // 107
-} // 108
+  for (let j = 0; j < N; j++) { // 92
+    const angle = angleStep * j; // 93
+    fireworks.push({ // 94
+      text: partsArr[j].word, // 95
+      angle: angle, // 96
+      row: partsArr[j].row, // 97
+      x: fx, // 98
+      y: fy, // 99
+      radius: baseRadius, // 100
+      maxRadius: maxRadius, // 101
+      arrived: false, // 102
+      targetX: canvas.width / 2, // 103
+      targetY: canvas.height / 2 + (partsArr[j].row - (totalLines - 1) / 2) * 40 // 104
+    }); // 105
+  } // 106
+  sentenceActive = true; // 107
+  centerAlpha = 1.0; // 108
+} // 109
 
-function updateFireworks() { // 109
-  if (!fireworks) return false; // 110
+function updateFireworks() { // 110
+  if (!fireworks) return false; // 111
 
-  fireworksState.t++; // 111
+  fireworksState.t++; // 112
 
-  if (fireworksState.phase === "explode") { // 112
-    const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1); // 113
-    const ease = 1 - Math.pow(1 - progress, 2); // 114
-    const radius = 80 + (210 - 80) * ease; // 115
+  if (fireworksState.phase === "explode") { // 113
+    const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1); // 114
+    const ease = 1 - Math.pow(1 - progress, 2); // 115
+    // 반지름 20% 더 줄인 값 사용 // 116
+    const radius = 51.2 + (134.4 - 51.2) * ease; // 117
 
-    fireworks.forEach((fw) => { // 116
-      fw.radius = radius; // 117
-      fw.x = fireworksState.originX + Math.cos(fw.angle) * radius; // 118
-      fw.y = fireworksState.originY + Math.sin(fw.angle) * radius; // 119
-    }); // 120
+    fireworks.forEach((fw) => { // 118
+      fw.radius = radius; // 119
+      fw.x = fireworksState.originX + Math.cos(fw.angle) * radius; // 120
+      fw.y = fireworksState.originY + Math.sin(fw.angle) * radius; // 121
+    }); // 122
 
-    if (progress >= 1) { // 121
-      fireworksState.phase = "hold"; // 122
-      fireworksState.t = 0; // 123
-    } // 124
-  } else if (fireworksState.phase === "hold") { // 125
-    if (fireworksState.t >= fireworksState.holdDuration) { // 126
-      fireworksState.phase = "gather"; // 127
-      fireworksState.t = 0; // 128
-    } // 129
-  } else if (fireworksState.phase === "gather") { // 130
-    const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1); // 131
-    const ease = Math.pow(progress, 2); // 132
-    fireworks.forEach((fw) => { // 133
-      fw.x += (fw.targetX - fw.x) * ease * 0.2; // 134
-      fw.y += (fw.targetY - fw.y) * ease * 0.2; // 135
-    }); // 136
+    if (progress >= 1) { // 123
+      fireworksState.phase = "hold"; // 124
+      fireworksState.t = 0; // 125
+    } // 126
+  } else if (fireworksState.phase === "hold") { // 127
+    if (fireworksState.t >= fireworksState.holdDuration) { // 128
+      fireworksState.phase = "gather"; // 129
+      fireworksState.t = 0; // 130
+    } // 131
+  } else if (fireworksState.phase === "gather") { // 132
+    const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1); // 133
+    const ease = Math.pow(progress, 2); // 134
+    fireworks.forEach((fw) => { // 135
+      fw.x += (fw.targetX - fw.x) * ease * 0.2; // 136
+      fw.y += (fw.targetY - fw.y) * ease * 0.2; // 137
+    }); // 138
 
-    if (progress >= 1) { // 137
-      fireworksState.phase = "done"; // 138
-      const [line1, line2] = splitSentence(nextSentence); // 139
-      centerSentence = { line1, line2 }; // 140
-      centerAlpha = 1.0; // 141
-      fireworks = null; // 142
-      fireworksState = null; // 143
-      sentenceActive = false; // 144
-    } // 145
-  } // 146
-} // 147
+    if (progress >= 1) { // 139
+      fireworksState.phase = "done"; // 140
+      const [line1, line2] = splitSentence(nextSentence); // 141
+      centerSentence = { line1, line2 }; // 142
+      centerAlpha = 1.0; // 143
+      fireworks = null; // 144
+      fireworksState = null; // 145
+      sentenceActive = false; // 146
+    } // 147
+  } // 148
+} // 149
 
-function fadeOutCenterSentence() { // 148
-  if (centerAlpha > 0) { // 149
-    centerAlpha -= 0.05; // 150
-    if (centerAlpha < 0) centerAlpha = 0; // 151
-  } // 152
-} // 153
+function fadeOutCenterSentence() { // 150
+  if (centerAlpha > 0) { // 151
+    centerAlpha -= 0.05; // 152
+    if (centerAlpha < 0) centerAlpha = 0; // 153
+  } // 154
+} // 155
 
-function drawFireworks() { // 154
-  if (!fireworks) return; // 155
-  ctx.save(); // 156
-  ctx.font = "bold 28px Arial"; // 157
-  ctx.textAlign = "center"; // 158
-  ctx.textBaseline = "middle"; // 159
-  fireworks.forEach(fw => { // 160
-    ctx.globalAlpha = 1; // 161
-    ctx.fillStyle = "#fff633"; // 162
-    ctx.fillText(fw.text, fw.x, fw.y); // 163
-  }); // 164
-  ctx.restore(); // 165
-} // 166
+function drawFireworks() { // 156
+  if (!fireworks) return; // 157
+  ctx.save(); // 158
+  ctx.font = "23.52px Arial"; // 159
+  ctx.textAlign = "center"; // 160
+  ctx.textBaseline = "middle"; // 161
+  // 효과 없음, 그림자 없음 // 162
+  fireworks.forEach(fw => { // 163
+    ctx.globalAlpha = 1; // 164
+    ctx.fillStyle = "#fff633"; // 165
+    ctx.fillText(fw.text, fw.x, fw.y); // 166
+  }); // 167
+  ctx.restore(); // 168
+} // 169
 
-function drawCenterSentence() { // 167
-  if (!centerSentence) return; // 168
-  ctx.save(); // 169
-  ctx.globalAlpha = centerAlpha; // 170
-  ctx.font = "bold 28px Arial"; // 171
-  ctx.textAlign = "center"; // 172
-  ctx.textBaseline = "middle"; // 173
-  const cx = canvas.width / 2; // 174
-  const cy = canvas.height / 2; // 175
-  ctx.fillStyle = "#fff633"; // 176
-  ctx.fillText(centerSentence.line1, cx, cy - 18); // 177
-  ctx.fillText(centerSentence.line2, cx, cy + 18); // 178
-  ctx.restore(); // 179
-} // 180
+function drawCenterSentence() { // 170
+  if (!centerSentence) return; // 171
+  ctx.save(); // 172
+  ctx.globalAlpha = centerAlpha; // 173
+  ctx.font = "23.52px Arial"; // 174
+  ctx.textAlign = "center"; // 175
+  ctx.textBaseline = "middle"; // 176
+  ctx.fillStyle = "#fff633"; // 177
+  ctx.fillText(centerSentence.line1, canvas.width / 2, canvas.height / 2 - 15); // 178
+  ctx.fillText(centerSentence.line2, canvas.width / 2, canvas.height / 2 + 15); // 179
+  ctx.restore(); // 180
+} // 181
 
-function spawnEnemy() { // 181
-  const idx = Math.floor(Math.random() * enemyImgs.length); // 182
-  const img = enemyImgs[idx]; // 183
-  const x = Math.random() * (canvas.width - ENEMY_SIZE); // 184
-  const y = Math.random() * canvas.height * 0.2 + 20; // 185
-  enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false }); // 186
-} // 187
+function spawnEnemy() { // 182
+  const idx = Math.floor(Math.random() * enemyImgs.length); // 183
+  const img = enemyImgs[idx]; // 184
+  const x = Math.random() * (canvas.width - ENEMY_SIZE); // 185
+  const y = Math.random() * canvas.height * 0.2 + 20; // 186
+  enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false }); // 187
+} // 188
 
-function startGame() { // 188
-  if (!assetsLoaded) { // 189
-    alert("이미지 로딩 중입니다. 잠시 후 다시 시도하세요."); // 190
-    return; // 191
-  } // 192
-  isGameRunning = true; // 193
-  isGamePaused = false; // 194
-  sounds.background.currentTime = 0; // 195
-  sounds.background.play(); // 196
+function startGame() { // 189
+  if (!assetsLoaded) { // 190
+    alert("이미지 로딩 중입니다. 잠시 후 다시 시도하세요."); // 191
+    return; // 192
+  } // 193
+  isGameRunning = true; // 194
+  isGamePaused = false; // 195
+  sounds.background.currentTime = 0; // 196
+  sounds.background.play(); // 197
 
-  enemies = []; // 197
-  bullets = []; // 198
-  enemyBullets = []; // 199
-  spawnEnemy(); // 200
+  enemies = []; // 198
+  bullets = []; // 199
+  enemyBullets = []; // 200
   spawnEnemy(); // 201
+  spawnEnemy(); // 202
 
-  player.x = canvas.width / 2 - PLAYER_SIZE / 2; // 202
-  player.y = canvas.height - PLAYER_SIZE - 10; // 203
+  player.x = canvas.width / 2 - PLAYER_SIZE / 2; // 203
+  player.y = canvas.height - PLAYER_SIZE - 10; // 204
 
-  fireworks = null; // 204
-  fireworksState = null; // 205
-  centerSentence = null; // 206
-  centerAlpha = 1.0; // 207
-  nextSentence = null; // 208
-  sentenceActive = false; // 209
+  fireworks = null; // 205
+  fireworksState = null; // 206
+  centerSentence = null; // 207
+  centerAlpha = 1.0; // 208
+  nextSentence = null; // 209
+  sentenceActive = false; // 210
 
-  lastTime = performance.now(); // 210
-  requestAnimationFrame(gameLoop); // 211
-} // 212
+  lastTime = performance.now(); // 211
+  requestAnimationFrame(gameLoop); // 212
+} // 213
 
-function togglePause() { // 213
-  if (!isGameRunning) return; // 214
-  isGamePaused = !isGamePaused; // 215
-  if (isGamePaused) { // 216
-    sounds.background.pause(); // 217
-  } else { // 218
-    sounds.background.play(); // 219
-    lastTime = performance.now(); // 220
-    requestAnimationFrame(gameLoop); // 221
-  } // 222
-} // 223
+function togglePause() { // 214
+  if (!isGameRunning) return; // 215
+  isGamePaused = !isGamePaused; // 216
+  if (isGamePaused) { // 217
+    sounds.background.pause(); // 218
+  } else { // 219
+    sounds.background.play(); // 220
+    lastTime = performance.now(); // 221
+    requestAnimationFrame(gameLoop); // 222
+  } // 223
+} // 224
 
-function stopGame() { // 224
-  isGameRunning = false; // 225
-  isGamePaused = false; // 226
-  sounds.background.pause(); // 227
-  sounds.background.currentTime = 0; // 228
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // 229
-  fireworks = null; // 230
-  fireworksState = null; // 231
-  centerSentence = null; // 232
-  centerAlpha = 1.0; // 233
-  nextSentence = null; // 234
-  sentenceActive = false; // 235
-} // 236
+function stopGame() { // 225
+  isGameRunning = false; // 226
+  isGamePaused = false; // 227
+  sounds.background.pause(); // 228
+  sounds.background.currentTime = 0; // 229
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // 230
+  fireworks = null; // 231
+  fireworksState = null; // 232
+  centerSentence = null; // 233
+  centerAlpha = 1.0; // 234
+  nextSentence = null; // 235
+  sentenceActive = false; // 236
+} // 237
 
-canvas.addEventListener('touchstart', e => { // 237
-  e.preventDefault(); // 238
-  if (!isGameRunning || isGamePaused) return; // 239
+canvas.addEventListener('touchstart', e => { // 238
+  e.preventDefault(); // 239
+  if (!isGameRunning || isGamePaused) return; // 240
 
-  const rect = canvas.getBoundingClientRect(); // 240
-  const touch = e.touches[0]; // 241
+  const rect = canvas.getBoundingClientRect(); // 241
+  const touch = e.touches[0]; // 242
 
-  player.x = touch.clientX - rect.left - player.w / 2; // 242
-  player.y = touch.clientY - rect.top - player.h / 2 - 20; // 243
-  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x)); // 244
-  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y)); // 245
+  player.x = touch.clientX - rect.left - player.w / 2; // 243
+  player.y = touch.clientY - rect.top - player.h / 2 - 20; // 244
+  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x)); // 245
+  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y)); // 246
 
-  bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 }); // 246
-  sounds.shoot.play(); // 247
+  bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 }); // 247
+  sounds.shoot.play(); // 248
 
-  enemies.forEach(e => { // 248
-    if (!e.shot) { // 249
-      enemyBullets.push({ x: e.x + e.w / 2 - 2.5, y: e.y + e.h, w: 5, h: 10, speed: 1.5 }); // 250
-      e.shot = true; // 251
-    } // 252
-  }); // 253
-}, { passive: false }); // 254
+  enemies.forEach(e => { // 249
+    if (!e.shot) { // 250
+      enemyBullets.push({ x: e.x + e.w / 2 - 2.5, y: e.y + e.h, w: 5, h: 10, speed: 1.5 }); // 251
+      e.shot = true; // 252
+    } // 253
+  }); // 254
+}, { passive: false }); // 255
 
-function update(delta) { // 255
-  enemies = enemies.filter(e => e.y <= canvas.height); // 256
-  while (enemies.length < 2) spawnEnemy(); // 257
-  enemies.forEach(e => e.y += 1); // 258
+function update(delta) { // 256
+  enemies = enemies.filter(e => e.y <= canvas.height); // 257
+  while (enemies.length < 2) spawnEnemy(); // 258
+  enemies.forEach(e => e.y += 1); // 259
 
-  bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; }); // 259
-  enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; }); // 260
+  bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; }); // 260
+  enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; }); // 261
 
-  enemyBullets.forEach((b, i) => { // 261
-    if (b.x < player.x + player.w && b.x + b.w > player.x && b.y < player.y + player.h && b.y + b.h > player.y) { // 262
-      enemyBullets.splice(i, 1); // 263
-      sounds.explosion.play(); // 264
-    } // 265
-  }); // 266
+  enemyBullets.forEach((b, i) => { // 262
+    if (b.x < player.x + player.w && b.x + b.w > player.x && b.y < player.y + player.h && b.y + b.h > player.y) { // 263
+      enemyBullets.splice(i, 1); // 264
+      sounds.explosion.play(); // 265
+    } // 266
+  }); // 267
 
-  bullets.forEach((b, bi) => { // 267
-    enemies.forEach((e, ei) => { // 268
-      if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) { // 269
-        // 폭발 상태가 아니면(항상 새로) // 270
+  bullets.forEach((b, bi) => { // 268
+    enemies.forEach((e, ei) => { // 269
+      if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) { // 270
         if (!fireworks && !sentenceActive) { // 271
           nextSentence = sentences[Math.floor(Math.random() * sentences.length)]; // 272
           const fx = e.x + e.w / 2; // 273
@@ -320,39 +320,40 @@ function update(delta) { // 255
 
   if (fireworks) { // 283
     updateFireworks(); // 284
-    // 중앙문장이 fade out된 후에는 null 처리 // 285
-    if (centerSentence && centerAlpha > 0 && !fireworks) { // 286
-      fadeOutCenterSentence(); // 287
-      if (centerAlpha <= 0) centerSentence = null; // 288
-    } // 289
-  } // 290
-} // 291
+    if (centerSentence && centerAlpha > 0 && !fireworks) { // 285
+      fadeOutCenterSentence(); // 286
+      if (centerAlpha <= 0) centerSentence = null; // 287
+    } // 288
+  } // 289
+} // 290
 
-function draw() { // 292
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // 293
-  ctx.drawImage(playerImg, player.x, player.y, player.w, player.h); // 294
-  enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h)); // 295
+function draw() { // 291
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // 292
+  ctx.drawImage(playerImg, player.x, player.y, player.w, player.h); // 293
+  enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h)); // 294
 
-  ctx.fillStyle = 'red'; // 296
-  bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h)); // 297
+  ctx.fillStyle = 'red'; // 295
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h)); // 296
 
-  ctx.fillStyle = 'orange'; // 298
-  enemyBullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h)); // 299
+  ctx.fillStyle = 'orange'; // 297
+  enemyBullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h)); // 298
 
-  drawCenterSentence(); // 300
-  drawFireworks(); // 301
-} // 302
+  drawCenterSentence(); // 299
+  drawFireworks(); // 300
+} // 301
 
-function gameLoop(time) { // 303
-  if (!isGameRunning || isGamePaused) return; // 304
-  const delta = time - lastTime; // 305
-  lastTime = time; // 306
-  update(delta); // 307
-  draw(); // 308
-  requestAnimationFrame(gameLoop); // 309
-} // 310
+function gameLoop(time) { // 302
+  if (!isGameRunning || isGamePaused) return; // 303
+  const delta = time - lastTime; // 304
+  lastTime = time; // 305
 
-// 버튼 연결 // 311
-document.getElementById('startBtn').onclick = startGame; // 312
-document.getElementById('pauseBtn').onclick = togglePause; // 313
-document.getElementById('stopBtn').onclick = stopGame; // 314
+  update(delta); // 306
+  draw(); // 307
+
+  requestAnimationFrame(gameLoop); // 308
+} // 309
+
+// 상단 버튼 연결 // 310
+document.getElementById('startBtn').onclick = startGame; // 311
+document.getElementById('pauseBtn').onclick = togglePause; // 312
+document.getElementById('stopBtn').onclick = stopGame; // 313
