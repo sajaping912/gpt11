@@ -21,7 +21,7 @@ const sentences = [
   "I’d like to order the same as her.",
   "I’m looking forward to our trip next month.",
   "Can you recommend a good place to eat?",
-  // ...90개 더 추가!
+  // ...여기에 최대 100개 문장까지 추가!...
 ];
 
 let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
@@ -71,6 +71,46 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
+// ===== 웹 TTS (남/여 미국음성 자동) =====
+function getVoice(lang = 'en-US', gender = 'female') {
+  const voices = window.speechSynthesis.getVoices();
+  // 여자/남자 성별 및 미국식 영어만 필터
+  const filtered = voices.filter(v =>
+    v.lang === lang &&
+    (gender === 'female'
+      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('samantha')
+      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('daniel'))
+  );
+  // 없다면 en-US 전체 중에서 랜덤 1개
+  if (filtered.length) return filtered[0];
+  const fallback = voices.filter(v => v.lang === lang);
+  return fallback.length ? fallback[0] : null;
+}
+
+function speakSentence(text, gender = 'female') {
+  return new Promise(resolve => {
+    const utter = new window.SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = 1.0;
+    utter.pitch = gender === 'female' ? 1.08 : 1.0;
+    utter.voice = getVoice('en-US', gender);
+    utter.onend = resolve;
+    window.speechSynthesis.speak(utter);
+  });
+}
+
+function playSentenceBySpeechSynthesis(idx) {
+  const sentence = sentences[idx];
+  window.speechSynthesis.cancel(); // 기존 재생 중단(중첩방지)
+  setTimeout(() => {
+    speakSentence(sentence, 'male');
+    setTimeout(() => {
+      speakSentence(sentence, 'female');
+    }, 1000);
+  }, 2000);
+}
+
+// === 문장 두 줄 분할 ===
 function splitSentence(sentence) {
   const words = sentence.split(" ");
   const half = Math.ceil(words.length / 2);
@@ -216,7 +256,7 @@ function drawCenterSentence() {
   ];
 
   let lines = [centerSentence.line1, centerSentence.line2];
-  let yBase = canvas.height / 2 - 25; // ★★★ 여기서 -15 → -25로 10px 위로!
+  let yBase = canvas.height / 2 - 25;
   for (let i = 0; i < lines.length; i++) {
     let words = lines[i].split(" ");
     let verbIdx = findMainVerb(words);
@@ -356,6 +396,8 @@ function update(delta) {
           const fy = e.y + e.h / 2;
           startFireworks(nextSentence, fx, fy);
           sounds.explosion.play();
+          // === 문장 읽기(남→여 순서) 추가 ===
+          playSentenceBySpeechSynthesis(sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
         }
         enemies.splice(ei, 1);
         bullets.splice(bi, 1);
