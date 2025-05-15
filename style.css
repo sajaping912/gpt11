@@ -1,0 +1,40 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: black;
+}
+#gameCanvas {
+  display: block;
+  touch-action: none;
+  -ms-touch-action: none;
+  background-color: black;
+}
+#topControls {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;      /* ← 여기만 16px로 수정! */
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+#topControls button {
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 4px;
+}
+#topControls .start-btn {
+  background: #16c016;   /* 녹색 */
+}
+#topControls .pause-btn {
+  background: #ffcb05;   /* 노랑 */
+  color: #222;
+}
+#topControls .stop-btn {
+  background: #e53935;   /* 빨강 */
+}
