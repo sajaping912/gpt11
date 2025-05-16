@@ -99,16 +99,19 @@ function speakSentence(text, gender = 'female') {
   });
 }
 
-function playSentenceBySpeechSynthesis(idx) {
+// === 폭발 후 2초 → 남자 → 1.5초 → 여자 ===
+async function playSentenceBySpeechSynthesis(idx) {
   const sentence = sentences[idx];
   window.speechSynthesis.cancel(); // 기존 재생 중단(중첩방지)
-  setTimeout(() => {
-    speakSentence(sentence, 'male');
-    setTimeout(() => {
-      speakSentence(sentence, 'female');
-    }, 1000);
-  }, 2000);
+  // 폭발 후 2초 대기
+  await new Promise(r => setTimeout(r, 2000));
+  // 첫 번째(남자) 읽기
+  await speakSentence(sentence, 'male');
+  // 1.5초 대기 후 두 번째(여자) 읽기
+  await new Promise(r => setTimeout(r, 1500));
+  await speakSentence(sentence, 'female');
 }
+// === 함수 끝 ===
 
 // === 문장 두 줄 분할 ===
 function splitSentence(sentence) {
@@ -396,7 +399,7 @@ function update(delta) {
           const fy = e.y + e.h / 2;
           startFireworks(nextSentence, fx, fy);
           sounds.explosion.play();
-          // === 문장 읽기(남→여 순서) 추가 ===
+          // === 문장 읽기(폭발 후 2초→남→1.5초→여) 추가 ===
           playSentenceBySpeechSynthesis(sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
         }
         enemies.splice(ei, 1);
