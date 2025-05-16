@@ -56,6 +56,13 @@ sounds.explosion.volume = 0.05;  // 폭발 소리 5%
 sounds.background.volume = 0.2;  // 배경음악 20%
 sounds.background.loop = true;
 
+// 볼륨 자동 상승 완전 차단 (모바일 포함)
+setInterval(() => {
+  if (sounds.background && sounds.background.volume !== 0.2) {
+    sounds.background.volume = 0.2;
+  }
+}, 1000);
+
 let assetsLoaded = false;
 let loadedImages = 0;
 function onImageLoad() {
@@ -83,6 +90,7 @@ const burstColors = [
 let fireworks = null;
 let fireworksState = null;
 let centerSentence = null;
+let centerSentenceIndex = null; // ★ 이전 문장 인덱스 추적
 let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
@@ -243,11 +251,12 @@ function updateFireworks() {
       fireworksState.phase = "done";
       const [line1, line2] = splitSentence(nextSentence);
       centerSentence = { line1, line2 };
+      centerSentenceIndex = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1); // ★ 여기가 핵심!
       centerAlpha = 1.0;
       fireworks = null;
       fireworksState = null;
       sentenceActive = false;
-      // ---- 큐에 폭발 문장 인덱스 쌓기 ----
+      // 큐에 폭발 문장 인덱스 쌓기...
       let idx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
       speakQueue.push(idx);
       speakQueueRunner();
@@ -263,15 +272,19 @@ function drawCenterSentence() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
-  const blueWords = ["when", "where", "what", "why", "how", "who", "which", "will", "can", "may", "should", "must", "could", "might", "would"];
+  // 조동사 긍정 + 부정형 모두 파랑 처리
+  const blueWords = [
+    "when","where","what","why","how","who","which",
+    "will","would","can","could","may","should","must","might",
+    "won't","wouldn't","can't","cannot","couldn't","shouldn't","mustn't","mightn't"
+  ];
 
   let lines = [centerSentence.line1, centerSentence.line2];
   let yBase = canvas.height / 2 - 25;
 
-  // 현재 문장의 인덱스 및 본동사(소문자) 구하기
-  let currentIdx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
+  // ★ 항상 centerSentenceIndex 기준으로 본동사 지정
+  let currentIdx = centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
   let mainVerb = mainVerbs[currentIdx];
-
   let foundVerb = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -335,6 +348,7 @@ function startGame() {
   isGamePaused = false;
   sounds.background.currentTime = 0;
   sounds.background.play();
+  sounds.background.volume = 0.2; // 강제 적용
 
   bullets = [];
   enemies = [];
@@ -342,6 +356,7 @@ function startGame() {
   fireworks = null;
   fireworksState = null;
   centerSentence = null;
+  centerSentenceIndex = null; // ★ 초기화!
   sentenceActive = false;
   centerAlpha = 1.0;
   speakQueue = [];
@@ -362,8 +377,10 @@ function togglePause() {
   isGamePaused = !isGamePaused;
   if (isGamePaused) {
     sounds.background.pause();
+    sounds.background.volume = 0.2; // 강제 적용
   } else {
     sounds.background.play();
+    sounds.background.volume = 0.2; // 강제 적용
     requestAnimationFrame(gameLoop);
   }
 }
@@ -372,6 +389,7 @@ function stopGame() {
   isGameRunning = false;
   isGamePaused = false;
   sounds.background.pause();
+  sounds.background.volume = 0.2; // 강제 적용
   window.speechSynthesis.cancel();
 
   bullets = [];
@@ -380,6 +398,7 @@ function stopGame() {
   fireworks = null;
   fireworksState = null;
   centerSentence = null;
+  centerSentenceIndex = null; // ★ 초기화!
   centerAlpha = 0;
   sentenceActive = false;
   speakQueue = [];
@@ -451,11 +470,6 @@ function draw() {
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
   drawCenterSentence();
   drawFireworks();
-
-  // 볼륨 강제 고정 (자동 볼륨상승 차단)
-  if (sounds.background.volume !== 0.2) {
-    sounds.background.volume = 0.2;
-  }
 }
 
 function gameLoop(time) {
