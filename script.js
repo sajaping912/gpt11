@@ -129,7 +129,6 @@ function startFireworks(sentence, fx, fy) {
   const baseRadius = 51.2 * 0.88;
   const maxRadius = 120.96 * 0.88;
 
-  // x축 벽면 안으로 자동 보정
   let centerX = fx;
   const margin = 8;
   if (centerX - maxRadius < margin) {
@@ -198,7 +197,6 @@ function updateFireworks() {
     if (fireworksState.t >= fireworksState.holdDuration) {
       fireworksState.phase = "gather";
       fireworksState.t = 0;
-      // ★★★ 중앙 문장(첫번째) 즉시 사라짐! ★★★
       centerAlpha = 0;
     }
   } else if (fireworksState.phase === "gather") {
@@ -221,32 +219,6 @@ function updateFireworks() {
   }
 }
 
-function fadeOutCenterSentence() {
-  if (centerAlpha > 0) {
-    centerAlpha -= 0.05;
-    if (centerAlpha < 0) centerAlpha = 0;
-  }
-}
-
-function findMainVerb(words) {
-  const verbs = [
-    "am", "is", "are", "was", "were", "be", "been", "being",
-    "do", "does", "did", "have", "has", "had", "can", "could", "will", "would", "shall", "should", "may", "might", "must",
-    "go", "goes", "went", "gone", "come", "comes", "came", "see", "sees", "saw", "seen",
-    "make", "makes", "made", "take", "takes", "took", "taken", "eat", "eats", "ate", "eaten", "drink", "drinks", "drank", "drunk",
-    "play", "plays", "played", "work", "works", "worked", "study", "studies", "studied",
-    "recommend", "order", "orders", "ordered", "talk", "talks", "talked",
-    "grab", "grabs", "grabbed", "enjoy", "enjoys", "enjoyed", "believe", "believes", "believed", "spend", "spends", "spent", "look", "looks", "looked", "looking",
-    "forward", "looking", "help", "helps", "helped", "carry", "carries", "carried",
-    "like", "likes", "liked", "want", "wants", "wanted"
-  ];
-  for (let i = 0; i < words.length; i++) {
-    let w = words[i].toLowerCase().replace(/[.,?]/g, '');
-    if (verbs.includes(w)) return i;
-  }
-  return -1;
-}
-
 function drawCenterSentence() {
   if (!centerSentence) return;
   ctx.save();
@@ -255,17 +227,12 @@ function drawCenterSentence() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
-  const blueWords = [
-    "when", "where", "what", "why", "how", "who", "which",
-    "will", "can", "may", "should", "must",
-    "could", "might", "would"
-  ];
+  const blueWords = ["when", "where", "what", "why", "how", "who", "which", "will", "can", "may", "should", "must", "could", "might", "would"];
 
   let lines = [centerSentence.line1, centerSentence.line2];
   let yBase = canvas.height / 2 - 25;
   for (let i = 0; i < lines.length; i++) {
     let words = lines[i].split(" ");
-    let verbIdx = findMainVerb(words);
     let totalWidth = 0;
     let wordWidths = [];
     for (let w = 0; w < words.length; w++) {
@@ -274,13 +241,10 @@ function drawCenterSentence() {
       if (w < words.length - 1) totalWidth += ctx.measureText(" ").width;
     }
     let px = canvas.width / 2 - totalWidth / 2;
-
     for (let w = 0; w < words.length; w++) {
-      let wordLower = words[w].toLowerCase().replace(/[.,?]/g, '');
-      if (blueWords.includes(wordLower)) {
+      const lower = words[w].toLowerCase().replace(/[.,?]/g, '');
+      if (blueWords.includes(lower)) {
         ctx.fillStyle = "#40A6FF";
-      } else if (w === verbIdx) {
-        ctx.fillStyle = "#FFD600";
       } else {
         ctx.fillStyle = "#fff";
       }
@@ -324,9 +288,15 @@ function startGame() {
   sounds.background.currentTime = 0;
   sounds.background.play();
 
-  enemies = [];
   bullets = [];
+  enemies = [];
   enemyBullets = [];
+  fireworks = null;
+  fireworksState = null;
+  centerSentence = null;
+  sentenceActive = false;
+  centerAlpha = 1.0;
+
   spawnEnemy();
   spawnEnemy();
 
@@ -340,13 +310,30 @@ function startGame() {
 function togglePause() {
   if (!isGameRunning) return;
   isGamePaused = !isGamePaused;
-  if (!isGamePaused) requestAnimationFrame(gameLoop);
+  if (isGamePaused) {
+    sounds.background.pause();
+  } else {
+    sounds.background.play();
+    requestAnimationFrame(gameLoop);
+  }
 }
 
 function stopGame() {
   isGameRunning = false;
   isGamePaused = false;
   sounds.background.pause();
+  window.speechSynthesis.cancel();
+
+  bullets = [];
+  enemies = [];
+  enemyBullets = [];
+  fireworks = null;
+  fireworksState = null;
+  centerSentence = null;
+  centerAlpha = 0;
+  sentenceActive = false;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 canvas.addEventListener('touchstart', e => {
@@ -383,13 +370,6 @@ function update(delta) {
   bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; });
   enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
 
-  enemyBullets.forEach((b, i) => {
-    if (b.x < player.x + player.w && b.x + b.w > player.x && b.y < player.y + player.h && b.y + b.h > player.y) {
-      enemyBullets.splice(i, 1);
-      sounds.explosion.play();
-    }
-  });
-
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
       if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
@@ -409,11 +389,7 @@ function update(delta) {
     });
   });
 
-  if (fireworks) {
-    updateFireworks();
-    // fadeOutCenterSentence(); // fade out 비활성화(바로 사라지게 수정)
-    // if (centerAlpha <= 0) centerSentence = null; // 필요없음
-  }
+  if (fireworks) updateFireworks();
 }
 
 function draw() {
