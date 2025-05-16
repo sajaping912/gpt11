@@ -51,6 +51,9 @@ const sounds = {
   explosion: new Audio('sounds/explosion.mp3'),
   background: new Audio('sounds/background.mp3')
 };
+sounds.shoot.volume = 0.05;      // 총알 발사 소리 5%
+sounds.explosion.volume = 0.05;  // 폭발 소리 5%
+sounds.background.volume = 0.2;  // 배경음악 20%
 sounds.background.loop = true;
 
 let assetsLoaded = false;
@@ -200,7 +203,6 @@ function startFireworks(sentence, fx, fy) {
   centerAlpha = 1.0;
 }
 
-let lastSpokenSentenceIdx = -1;
 function updateFireworks() {
   if (!fireworks) return false;
 
@@ -449,6 +451,11 @@ function draw() {
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
   drawCenterSentence();
   drawFireworks();
+
+  // 볼륨 강제 고정 (자동 볼륨상승 차단)
+  if (sounds.background.volume !== 0.2) {
+    sounds.background.volume = 0.2;
+  }
 }
 
 function gameLoop(time) {
