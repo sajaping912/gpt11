@@ -137,9 +137,9 @@ function startFireworks(sentence, fx, fy) {
     partsArr = partsArr.concat(parts.map(word => ({ word, row: i })));
   });
 
-  const N = partsArr.length;
-  const baseRadius = 51.2;
-  const maxRadius = 120.96;
+  // === 폭발 반지름 12% 감소 ===
+  const baseRadius = 51.2 * 0.88;      // 약 45.056
+  const maxRadius = 120.96 * 0.88;     // 약 106.4448
 
   fireworks = [];
   fireworksState = {
@@ -152,6 +152,7 @@ function startFireworks(sentence, fx, fy) {
     originY: fy
   };
 
+  const N = partsArr.length;
   for (let j = 0; j < N; j++) {
     const angle = getClockwiseAngle(j, N);
     const color = burstColors[j % burstColors.length];
@@ -181,7 +182,10 @@ function updateFireworks() {
   if (fireworksState.phase === "explode") {
     const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1);
     const ease = 1 - Math.pow(1 - progress, 2);
-    const radius = 51.2 + (120.96 - 51.2) * ease;
+    // 반지름 계산도 수정
+    const baseRadius = 51.2 * 0.88;
+    const maxRadius = 120.96 * 0.88;
+    const radius = baseRadius + (maxRadius - baseRadius) * ease;
 
     fireworks.forEach((fw) => {
       fw.radius = radius;
