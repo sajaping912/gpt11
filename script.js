@@ -8,7 +8,6 @@ window.addEventListener('resize', () => {
   canvas.height = window.innerHeight;
 });
 
-// ===== 영어 문장 리스트 (100개로 확장 가능, 예시 10개만) =====
 const sentences = [
   "When will you arrive at the station?",
   "I can’t believe how fast time goes by.",
@@ -21,7 +20,6 @@ const sentences = [
   "I’d like to order the same as her.",
   "I’m looking forward to our trip next month.",
   "Can you recommend a good place to eat?",
-  // ...여기에 최대 100개 문장까지 추가!...
 ];
 
 let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
@@ -71,17 +69,14 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
-// ===== 웹 TTS (남/여 미국음성 자동) =====
 function getVoice(lang = 'en-US', gender = 'female') {
   const voices = window.speechSynthesis.getVoices();
-  // 여자/남자 성별 및 미국식 영어만 필터
   const filtered = voices.filter(v =>
     v.lang === lang &&
     (gender === 'female'
       ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('samantha')
       : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('daniel'))
   );
-  // 없다면 en-US 전체 중에서 랜덤 1개
   if (filtered.length) return filtered[0];
   const fallback = voices.filter(v => v.lang === lang);
   return fallback.length ? fallback[0] : null;
@@ -99,21 +94,15 @@ function speakSentence(text, gender = 'female') {
   });
 }
 
-// === 폭발 후 2초 → 남자 → 1.5초 → 여자 ===
 async function playSentenceBySpeechSynthesis(idx) {
   const sentence = sentences[idx];
-  window.speechSynthesis.cancel(); // 기존 재생 중단(중첩방지)
-  // 폭발 후 2초 대기
+  window.speechSynthesis.cancel();
   await new Promise(r => setTimeout(r, 2000));
-  // 첫 번째(남자) 읽기
   await speakSentence(sentence, 'male');
-  // 1.5초 대기 후 두 번째(여자) 읽기
   await new Promise(r => setTimeout(r, 1500));
   await speakSentence(sentence, 'female');
 }
-// === 함수 끝 ===
 
-// === 문장 두 줄 분할 ===
 function splitSentence(sentence) {
   const words = sentence.split(" ");
   const half = Math.ceil(words.length / 2);
@@ -137,16 +126,12 @@ function startFireworks(sentence, fx, fy) {
     partsArr = partsArr.concat(parts.map(word => ({ word, row: i })));
   });
 
-  // === 폭발 반지름 12% 감소 ===
-  const baseRadius = 51.2 * 0.88;      // 약 45.056
-  const maxRadius = 120.96 * 0.88;     // 약 106.4448
+  const baseRadius = 51.2 * 0.88;
+  const maxRadius = 120.96 * 0.88;
 
-  // 폭발 위치 보정 (단어가 화면 밖으로 나가지 않게 x축 이동)
+  // x축 벽면 안으로 자동 보정
   let centerX = fx;
-  const margin = 8; // 좌우 여유(픽셀)
-  // 폭발에서 제일 멀리 나가는 단어 x 위치가
-  // centerX - maxRadius >= margin
-  // centerX + maxRadius <= canvas.width - margin
+  const margin = 8;
   if (centerX - maxRadius < margin) {
     centerX = margin + maxRadius;
   }
@@ -195,7 +180,6 @@ function updateFireworks() {
   if (fireworksState.phase === "explode") {
     const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1);
     const ease = 1 - Math.pow(1 - progress, 2);
-    // 반지름 계산도 수정
     const baseRadius = 51.2 * 0.88;
     const maxRadius = 120.96 * 0.88;
     const radius = baseRadius + (maxRadius - baseRadius) * ease;
@@ -214,6 +198,8 @@ function updateFireworks() {
     if (fireworksState.t >= fireworksState.holdDuration) {
       fireworksState.phase = "gather";
       fireworksState.t = 0;
+      // ★★★ 중앙 문장(첫번째) 즉시 사라짐! ★★★
+      centerAlpha = 0;
     }
   } else if (fireworksState.phase === "gather") {
     const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1);
@@ -363,7 +349,6 @@ function stopGame() {
   sounds.background.pause();
 }
 
-// 터치로 이동 & 총알 발사 (터치할 때 1발만 발사)
 canvas.addEventListener('touchstart', e => {
   if (!isGameRunning || isGamePaused) return;
   const touch = e.touches[0];
@@ -416,7 +401,6 @@ function update(delta) {
           const fy = e.y + e.h / 2;
           startFireworks(nextSentence, fx, fy);
           sounds.explosion.play();
-          // === 문장 읽기(폭발 후 2초→남→1.5초→여) 추가 ===
           playSentenceBySpeechSynthesis(sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
         }
         enemies.splice(ei, 1);
@@ -427,10 +411,8 @@ function update(delta) {
 
   if (fireworks) {
     updateFireworks();
-    if (centerSentence && centerAlpha > 0 && !fireworks) {
-      fadeOutCenterSentence();
-      if (centerAlpha <= 0) centerSentence = null;
-    }
+    // fadeOutCenterSentence(); // fade out 비활성화(바로 사라지게 수정)
+    // if (centerAlpha <= 0) centerSentence = null; // 필요없음
   }
 }
 
