@@ -84,11 +84,18 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
-// 음성 재생 제어
+// ---- 읽기 큐 로직 ----
+let speakQueue = [];
 let isSpeaking = false;
 
-function getVoice(lang = 'en-US', gender = 'female') {
-  const voices = window.speechSynthesis.getVoices();
+async function getVoice(lang = 'en-US', gender = 'female') {
+  let voices = window.speechSynthesis.getVoices();
+  if (!voices.length) {
+    await new Promise(resolve => {
+      window.speechSynthesis.onvoiceschanged = resolve;
+    });
+    voices = window.speechSynthesis.getVoices();
+  }
   const filtered = voices.filter(v =>
     v.lang === lang &&
     (gender === 'female'
@@ -100,29 +107,34 @@ function getVoice(lang = 'en-US', gender = 'female') {
   return fallback.length ? fallback[0] : null;
 }
 
-function speakSentence(text, gender = 'female') {
-  return new Promise(resolve => {
+async function speakSentence(text, gender = 'female') {
+  await getVoice();
+  return new Promise(async resolve => {
     const utter = new window.SpeechSynthesisUtterance(text);
     utter.lang = 'en-US';
     utter.rate = 1.0;
     utter.pitch = gender === 'female' ? 1.08 : 1.0;
-    utter.voice = getVoice('en-US', gender);
+    utter.voice = await getVoice('en-US', gender);
     utter.onend = resolve;
     window.speechSynthesis.speak(utter);
   });
 }
 
-async function playSentenceBySpeechSynthesis(idx) {
+async function speakQueueRunner() {
   if (isSpeaking) return;
   isSpeaking = true;
-  const sentence = sentences[idx];
-  window.speechSynthesis.cancel();
-  await new Promise(r => setTimeout(r, 2000));
-  await speakSentence(sentence, 'female');
-  await new Promise(r => setTimeout(r, 1500));
-  await speakSentence(sentence, 'male');
+  while (speakQueue.length > 0) {
+    const idx = speakQueue.shift();
+    const sentence = sentences[idx];
+    await new Promise(r => setTimeout(r, 2000));
+    await speakSentence(sentence, 'female');
+    await new Promise(r => setTimeout(r, 1500));
+    await speakSentence(sentence, 'male');
+  }
   isSpeaking = false;
 }
+
+// ---- ----
 
 function splitSentence(sentence) {
   const words = sentence.split(" ");
@@ -188,6 +200,7 @@ function startFireworks(sentence, fx, fy) {
   centerAlpha = 1.0;
 }
 
+let lastSpokenSentenceIdx = -1;
 function updateFireworks() {
   if (!fireworks) return false;
 
@@ -232,8 +245,10 @@ function updateFireworks() {
       fireworks = null;
       fireworksState = null;
       sentenceActive = false;
-      // 여기서 문장 읽기 타이밍!
-      playSentenceBySpeechSynthesis(sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
+      // ---- 큐에 폭발 문장 인덱스 쌓기 ----
+      let idx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
+      speakQueue.push(idx);
+      speakQueueRunner();
     }
   }
 }
@@ -327,6 +342,8 @@ function startGame() {
   centerSentence = null;
   sentenceActive = false;
   centerAlpha = 1.0;
+  speakQueue = [];
+  isSpeaking = false;
 
   spawnEnemy();
   spawnEnemy();
@@ -363,6 +380,8 @@ function stopGame() {
   centerSentence = null;
   centerAlpha = 0;
   sentenceActive = false;
+  speakQueue = [];
+  isSpeaking = false;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
