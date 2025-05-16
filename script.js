@@ -141,6 +141,19 @@ function startFireworks(sentence, fx, fy) {
   const baseRadius = 51.2 * 0.88;      // 약 45.056
   const maxRadius = 120.96 * 0.88;     // 약 106.4448
 
+  // 폭발 위치 보정 (단어가 화면 밖으로 나가지 않게 x축 이동)
+  let centerX = fx;
+  const margin = 8; // 좌우 여유(픽셀)
+  // 폭발에서 제일 멀리 나가는 단어 x 위치가
+  // centerX - maxRadius >= margin
+  // centerX + maxRadius <= canvas.width - margin
+  if (centerX - maxRadius < margin) {
+    centerX = margin + maxRadius;
+  }
+  if (centerX + maxRadius > canvas.width - margin) {
+    centerX = canvas.width - margin - maxRadius;
+  }
+
   fireworks = [];
   fireworksState = {
     t: 0,
@@ -148,7 +161,7 @@ function startFireworks(sentence, fx, fy) {
     holdDuration: 60,
     explodeDuration: 180,
     gatherDuration: 45,
-    originX: fx,
+    originX: centerX,
     originY: fy
   };
 
@@ -160,7 +173,7 @@ function startFireworks(sentence, fx, fy) {
       text: partsArr[j].word,
       angle: angle,
       row: partsArr[j].row,
-      x: fx,
+      x: centerX,
       y: fy,
       radius: baseRadius,
       maxRadius: maxRadius,
