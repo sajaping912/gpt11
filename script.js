@@ -19,7 +19,22 @@ const sentences = [
   "It’s been a long day at the office.",
   "I’d like to order the same as her.",
   "I’m looking forward to our trip next month.",
-  "Can you recommend a good place to eat?",
+  "Can you recommend a good place to eat?"
+];
+
+// 각 문장별 본동사 리스트(단어 소문자 기준)
+const mainVerbs = [
+  "arrive",    // 0
+  "believe",   // 1
+  "do",        // 2
+  "help",      // 3
+  "enjoyed",   // 4
+  "grab",      // 5
+  "have",      // 6
+  "been",      // 7
+  "like",      // 8
+  "looking",   // 9
+  "recommend"  // 10
 ];
 
 let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
@@ -69,6 +84,9 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
+// 음성 재생 제어
+let isSpeaking = false;
+
 function getVoice(lang = 'en-US', gender = 'female') {
   const voices = window.speechSynthesis.getVoices();
   const filtered = voices.filter(v =>
@@ -95,12 +113,15 @@ function speakSentence(text, gender = 'female') {
 }
 
 async function playSentenceBySpeechSynthesis(idx) {
+  if (isSpeaking) return;
+  isSpeaking = true;
   const sentence = sentences[idx];
   window.speechSynthesis.cancel();
   await new Promise(r => setTimeout(r, 2000));
-  await speakSentence(sentence, 'male');
-  await new Promise(r => setTimeout(r, 1500));
   await speakSentence(sentence, 'female');
+  await new Promise(r => setTimeout(r, 1500));
+  await speakSentence(sentence, 'male');
+  isSpeaking = false;
 }
 
 function splitSentence(sentence) {
@@ -131,12 +152,8 @@ function startFireworks(sentence, fx, fy) {
 
   let centerX = fx;
   const margin = 8;
-  if (centerX - maxRadius < margin) {
-    centerX = margin + maxRadius;
-  }
-  if (centerX + maxRadius > canvas.width - margin) {
-    centerX = canvas.width - margin - maxRadius;
-  }
+  if (centerX - maxRadius < margin) centerX = margin + maxRadius;
+  if (centerX + maxRadius > canvas.width - margin) centerX = canvas.width - margin - maxRadius;
 
   fireworks = [];
   fireworksState = {
@@ -215,6 +232,8 @@ function updateFireworks() {
       fireworks = null;
       fireworksState = null;
       sentenceActive = false;
+      // 여기서 문장 읽기 타이밍!
+      playSentenceBySpeechSynthesis(sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
     }
   }
 }
@@ -231,6 +250,13 @@ function drawCenterSentence() {
 
   let lines = [centerSentence.line1, centerSentence.line2];
   let yBase = canvas.height / 2 - 25;
+
+  // 현재 문장의 인덱스 및 본동사(소문자) 구하기
+  let currentIdx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
+  let mainVerb = mainVerbs[currentIdx];
+
+  let foundVerb = false;
+
   for (let i = 0; i < lines.length; i++) {
     let words = lines[i].split(" ");
     let totalWidth = 0;
@@ -243,7 +269,12 @@ function drawCenterSentence() {
     let px = canvas.width / 2 - totalWidth / 2;
     for (let w = 0; w < words.length; w++) {
       const lower = words[w].toLowerCase().replace(/[.,?]/g, '');
-      if (blueWords.includes(lower)) {
+
+      // 본동사(노란색)는 한 문장당 한 번만
+      if (!foundVerb && lower === mainVerb) {
+        ctx.fillStyle = "#FFD600";
+        foundVerb = true;
+      } else if (blueWords.includes(lower)) {
         ctx.fillStyle = "#40A6FF";
       } else {
         ctx.fillStyle = "#fff";
@@ -381,7 +412,6 @@ function update(delta) {
           const fy = e.y + e.h / 2;
           startFireworks(nextSentence, fx, fy);
           sounds.explosion.play();
-          playSentenceBySpeechSynthesis(sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
         }
         enemies.splice(ei, 1);
         bullets.splice(bi, 1);
@@ -396,13 +426,8 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
   enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
-
   ctx.fillStyle = 'red';
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-
-  ctx.fillStyle = 'orange';
-  enemyBullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-
   drawCenterSentence();
   drawFireworks();
 }
