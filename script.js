@@ -271,10 +271,11 @@ function drawCenterSentence() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
-  // 모든 조동사 + 부정문 파랑
+  // 모든 조동사 + 부정문 파랑 + Be동사/Do류 의문문 파랑
   const blueWords = [
     "when","where","what","why","how","who","which",
-    "will","would","can","could","may","should","must","might","shall","do","does","did","have","has","had","is","are","was","were",
+    "will","would","can","could","may","should","must","might","shall",
+    "do","does","did","have","has","had","is","are","was","were","am",
     // 부정형 (모두 포함, ' 와 없는 것 둘 다)
     "won't","wont","wouldn't","wouldnt","can't","cant","cannot","couldn't","couldnt",
     "shouldn't","shouldnt","mustn't","mustnt","mightn't","mightnt","shan't","shant",
@@ -304,11 +305,17 @@ function drawCenterSentence() {
       // 특수문자 및 모든 작은따옴표(', ’) 제거
       const lower = words[w].toLowerCase().replace(/[.,?’']/g, '');
 
-      // 본동사(노란색)는 한 문장당 한 번만
+      // 본동사(노란색)는 한 문장에 한 번만
       if (!foundVerb && lower === mainVerb) {
         ctx.fillStyle = "#FFD600";
         foundVerb = true;
-      } else if (blueWords.includes(lower)) {
+      }
+      // 각 줄의 맨 앞 단어가 blueWords에 포함되어 있으면 무조건 파랑!
+      else if (w === 0 && blueWords.includes(lower)) {
+        ctx.fillStyle = "#40A6FF";
+      }
+      // 그 외에 조동사/부정문 파랑
+      else if (blueWords.includes(lower)) {
         ctx.fillStyle = "#40A6FF";
       } else {
         ctx.fillStyle = "#fff";
