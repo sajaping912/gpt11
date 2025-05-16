@@ -46,20 +46,40 @@ const enemyImgs = ['images/enemy1.png', 'images/enemy2.png'].map(src => {
   img.src = src;
   return img;
 });
+
+const bgmFiles = [
+  'sounds/background.mp3',
+  'sounds/background1.mp3',
+  'sounds/background2.mp3',
+  'sounds/background3.mp3'
+];
+let bgmIndex = 0;
+let bgmAudio = new Audio(bgmFiles[bgmIndex]);
+bgmAudio.volume = 0.05; // 5% 볼륨!
+bgmAudio.loop = false;
+
+function playNextBgm() {
+  bgmAudio.removeEventListener('ended', playNextBgm);
+  bgmIndex = (bgmIndex + 1) % bgmFiles.length;
+  bgmAudio = new Audio(bgmFiles[bgmIndex]);
+  bgmAudio.volume = 0.05; // 5% 볼륨!
+  bgmAudio.loop = false;
+  bgmAudio.addEventListener('ended', playNextBgm);
+  bgmAudio.play();
+}
+bgmAudio.addEventListener('ended', playNextBgm);
+
 const sounds = {
   shoot: new Audio('sounds/shoot.mp3'),
-  explosion: new Audio('sounds/explosion.mp3'),
-  background: new Audio('sounds/background.mp3')
+  explosion: new Audio('sounds/explosion.mp3')
 };
-sounds.shoot.volume = 0.05;      // 총알 발사 소리 5%
-sounds.explosion.volume = 0.05;  // 폭발 소리 5%
-sounds.background.volume = 0.2;  // 배경음악 20%
-sounds.background.loop = true;
+sounds.shoot.volume = 0.05;
+sounds.explosion.volume = 0.05;
 
-// 볼륨 자동 상승 완전 차단 (모바일 포함)
+// 볼륨 자동상승 차단 (모바일 포함)
 setInterval(() => {
-  if (sounds.background && sounds.background.volume !== 0.2) {
-    sounds.background.volume = 0.2;
+  if (bgmAudio && bgmAudio.volume !== 0.05) {
+    bgmAudio.volume = 0.05;
   }
 }, 1000);
 
@@ -357,9 +377,17 @@ function startGame() {
   }
   isGameRunning = true;
   isGamePaused = false;
-  sounds.background.currentTime = 0;
-  sounds.background.play();
-  sounds.background.volume = 0.2;
+  // 배경음악 시작
+  try {
+    bgmAudio.pause();
+    bgmAudio.currentTime = 0;
+  } catch (e) {}
+  bgmIndex = 0;
+  bgmAudio = new Audio(bgmFiles[bgmIndex]);
+  bgmAudio.volume = 0.05;
+  bgmAudio.loop = false;
+  bgmAudio.addEventListener('ended', playNextBgm);
+  bgmAudio.play();
 
   bullets = [];
   enemies = [];
@@ -387,11 +415,9 @@ function togglePause() {
   if (!isGameRunning) return;
   isGamePaused = !isGamePaused;
   if (isGamePaused) {
-    sounds.background.pause();
-    sounds.background.volume = 0.2;
+    bgmAudio.pause();
   } else {
-    sounds.background.play();
-    sounds.background.volume = 0.2;
+    bgmAudio.play();
     requestAnimationFrame(gameLoop);
   }
 }
@@ -399,8 +425,7 @@ function togglePause() {
 function stopGame() {
   isGameRunning = false;
   isGamePaused = false;
-  sounds.background.pause();
-  sounds.background.volume = 0.2;
+  bgmAudio.pause();
   window.speechSynthesis.cancel();
 
   bullets = [];
