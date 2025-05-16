@@ -90,7 +90,7 @@ const burstColors = [
 let fireworks = null;
 let fireworksState = null;
 let centerSentence = null;
-let centerSentenceIndex = null; // ★ 이전 문장 인덱스 추적
+let centerSentenceIndex = null;
 let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
@@ -251,12 +251,11 @@ function updateFireworks() {
       fireworksState.phase = "done";
       const [line1, line2] = splitSentence(nextSentence);
       centerSentence = { line1, line2 };
-      centerSentenceIndex = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1); // ★ 여기가 핵심!
+      centerSentenceIndex = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
       centerAlpha = 1.0;
       fireworks = null;
       fireworksState = null;
       sentenceActive = false;
-      // 큐에 폭발 문장 인덱스 쌓기...
       let idx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
       speakQueue.push(idx);
       speakQueueRunner();
@@ -272,17 +271,21 @@ function drawCenterSentence() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
-  // 조동사 긍정 + 부정형 모두 파랑 처리
+  // 모든 조동사 + 부정문 파랑
   const blueWords = [
     "when","where","what","why","how","who","which",
-    "will","would","can","could","may","should","must","might",
-    "won't","wouldn't","can't","cannot","couldn't","shouldn't","mustn't","mightn't"
+    "will","would","can","could","may","should","must","might","shall","do","does","did","have","has","had","is","are","was","were",
+    // 부정형 (모두 포함, ' 와 없는 것 둘 다)
+    "won't","wont","wouldn't","wouldnt","can't","cant","cannot","couldn't","couldnt",
+    "shouldn't","shouldnt","mustn't","mustnt","mightn't","mightnt","shan't","shant",
+    "needn't","neednt","oughtn't","oughtnt","isn't","isnt","aren't","arent",
+    "wasn't","wasnt","weren't","werent","don't","dont","doesn't","doesnt",
+    "didn't","didnt","haven't","havent","hasn't","hasnt","hadn't","hadnt"
   ];
 
   let lines = [centerSentence.line1, centerSentence.line2];
   let yBase = canvas.height / 2 - 25;
 
-  // ★ 항상 centerSentenceIndex 기준으로 본동사 지정
   let currentIdx = centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
   let mainVerb = mainVerbs[currentIdx];
   let foundVerb = false;
@@ -298,7 +301,8 @@ function drawCenterSentence() {
     }
     let px = canvas.width / 2 - totalWidth / 2;
     for (let w = 0; w < words.length; w++) {
-      const lower = words[w].toLowerCase().replace(/[.,?]/g, '');
+      // 특수문자 및 모든 작은따옴표(', ’) 제거
+      const lower = words[w].toLowerCase().replace(/[.,?’']/g, '');
 
       // 본동사(노란색)는 한 문장당 한 번만
       if (!foundVerb && lower === mainVerb) {
@@ -348,7 +352,7 @@ function startGame() {
   isGamePaused = false;
   sounds.background.currentTime = 0;
   sounds.background.play();
-  sounds.background.volume = 0.2; // 강제 적용
+  sounds.background.volume = 0.2;
 
   bullets = [];
   enemies = [];
@@ -356,7 +360,7 @@ function startGame() {
   fireworks = null;
   fireworksState = null;
   centerSentence = null;
-  centerSentenceIndex = null; // ★ 초기화!
+  centerSentenceIndex = null;
   sentenceActive = false;
   centerAlpha = 1.0;
   speakQueue = [];
@@ -377,10 +381,10 @@ function togglePause() {
   isGamePaused = !isGamePaused;
   if (isGamePaused) {
     sounds.background.pause();
-    sounds.background.volume = 0.2; // 강제 적용
+    sounds.background.volume = 0.2;
   } else {
     sounds.background.play();
-    sounds.background.volume = 0.2; // 강제 적용
+    sounds.background.volume = 0.2;
     requestAnimationFrame(gameLoop);
   }
 }
@@ -389,7 +393,7 @@ function stopGame() {
   isGameRunning = false;
   isGamePaused = false;
   sounds.background.pause();
-  sounds.background.volume = 0.2; // 강제 적용
+  sounds.background.volume = 0.2;
   window.speechSynthesis.cancel();
 
   bullets = [];
@@ -398,7 +402,7 @@ function stopGame() {
   fireworks = null;
   fireworksState = null;
   centerSentence = null;
-  centerSentenceIndex = null; // ★ 초기화!
+  centerSentenceIndex = null;
   centerAlpha = 0;
   sentenceActive = false;
   speakQueue = [];
