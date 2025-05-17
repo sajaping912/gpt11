@@ -151,13 +151,14 @@ async function speakSentence(text, gender = 'female') {
   });
 }
 
+// === 읽기 큐를 "최신 문장만" 읽게 개조 ===
 async function speakQueueRunner() {
   if (isSpeaking) return;
   isSpeaking = true;
   while (speakQueue.length > 0) {
     const idx = speakQueue.shift();
     const sentence = sentences[idx];
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1000)); // ★ 1초 후 읽기
     await speakSentence(sentence, 'female');
     await new Promise(r => setTimeout(r, 1500));
     await speakSentence(sentence, 'male');
@@ -277,8 +278,13 @@ function updateFireworks() {
       fireworksState = null;
       sentenceActive = false;
       let idx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
-      speakQueue.push(idx);
+
+      // ---- 큐는 항상 마지막 문장만 남기고 읽음 ----
+      window.speechSynthesis.cancel();      // 현재 읽고 있는 문장 즉시 중지
+      speakQueue = [idx];                  // 최신 폭발 문장만 큐에 추가
+      isSpeaking = false;                  // 큐 러너를 항상 재시작 가능하게
       speakQueueRunner();
+      // ---- ----
     }
   }
 }
