@@ -10,13 +10,14 @@ html, body {
   -ms-touch-action: none;
   background-color: black;
 }
+/* 메뉴 중앙 정렬 유지 */
 #topControls {
   position: fixed;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 16px;      /* ← 여기만 16px로 수정! */
+  gap: 16px;
   padding: 8px;
   background: rgba(0, 0, 0, 0.5);
   z-index: 10;
@@ -29,12 +30,37 @@ html, body {
   border-radius: 4px;
 }
 #topControls .start-btn {
-  background: #16c016;   /* 녹색 */
+  background: #16c016;
 }
 #topControls .pause-btn {
-  background: #ffcb05;   /* 노랑 */
+  background: #ffcb05;
   color: #222;
 }
 #topControls .stop-btn {
-  background: #e53935;   /* 빨강 */
+  background: #e53935;
+}
+
+/* 볼륨 버튼: 배경/테두리 없음, 오른쪽 상단 끝에 고정 */
+#volumeBtn.volume-btn {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  background: transparent !important;
+  border: none !important;
+  color: #fff;
+  font-size: 18px;
+  padding: 0 6px;
+  z-index: 20;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  cursor: pointer;
+  transition: none;
+}
+#volumeBtn.volume-btn:hover,
+#volumeBtn.volume-btn:active,
+#volumeBtn.volume-btn:focus {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }

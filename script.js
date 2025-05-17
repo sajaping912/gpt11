@@ -55,14 +55,27 @@ const bgmFiles = [
 ];
 let bgmIndex = 0;
 let bgmAudio = new Audio(bgmFiles[bgmIndex]);
-bgmAudio.volume = 0.05; // 5% 볼륨!
+bgmAudio.volume = 0.05;
 bgmAudio.loop = false;
+
+// 볼륨 제어 관련
+const volumeBtn = document.getElementById('volumeBtn');
+let isMuted = false;
+function updateVolumeIcon() {
+  volumeBtn.textContent = isMuted ? "🔇" : "🔊";
+}
+volumeBtn.onclick = function () {
+  isMuted = !isMuted;
+  bgmAudio.volume = isMuted ? 0 : 0.05;
+  updateVolumeIcon();
+};
+updateVolumeIcon();
 
 function playNextBgm() {
   bgmAudio.removeEventListener('ended', playNextBgm);
   bgmIndex = (bgmIndex + 1) % bgmFiles.length;
   bgmAudio = new Audio(bgmFiles[bgmIndex]);
-  bgmAudio.volume = 0.05; // 5% 볼륨!
+  bgmAudio.volume = isMuted ? 0 : 0.05;
   bgmAudio.loop = false;
   bgmAudio.addEventListener('ended', playNextBgm);
   bgmAudio.play();
@@ -76,10 +89,10 @@ const sounds = {
 sounds.shoot.volume = 0.05;
 sounds.explosion.volume = 0.05;
 
-// 볼륨 자동상승 차단 (모바일 포함)
+// 볼륨 자동상승 차단
 setInterval(() => {
-  if (bgmAudio && bgmAudio.volume !== 0.05) {
-    bgmAudio.volume = 0.05;
+  if (bgmAudio && bgmAudio.volume !== (isMuted ? 0 : 0.05)) {
+    bgmAudio.volume = isMuted ? 0 : 0.05;
   }
 }, 1000);
 
@@ -115,7 +128,7 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
-// ---- 읽기 큐 로직 ----
+// 읽기 큐 로직
 let speakQueue = [];
 let isSpeaking = false;
 
@@ -151,22 +164,20 @@ async function speakSentence(text, gender = 'female') {
   });
 }
 
-// === 읽기 큐를 "최신 문장만" 읽게 개조 ===
+// 읽기 큐를 "최신 문장만" 읽게 개조
 async function speakQueueRunner() {
   if (isSpeaking) return;
   isSpeaking = true;
   while (speakQueue.length > 0) {
     const idx = speakQueue.shift();
     const sentence = sentences[idx];
-    await new Promise(r => setTimeout(r, 1000)); // ★ 1초 후 읽기
+    await new Promise(r => setTimeout(r, 1000)); // 1초 후 읽기
     await speakSentence(sentence, 'female');
     await new Promise(r => setTimeout(r, 1500));
     await speakSentence(sentence, 'male');
   }
   isSpeaking = false;
 }
-
-// ---- ----
 
 function splitSentence(sentence) {
   const words = sentence.split(" ");
@@ -279,12 +290,10 @@ function updateFireworks() {
       sentenceActive = false;
       let idx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
 
-      // ---- 큐는 항상 마지막 문장만 남기고 읽음 ----
-      window.speechSynthesis.cancel();      // 현재 읽고 있는 문장 즉시 중지
-      speakQueue = [idx];                  // 최신 폭발 문장만 큐에 추가
-      isSpeaking = false;                  // 큐 러너를 항상 재시작 가능하게
+      window.speechSynthesis.cancel();
+      speakQueue = [idx];
+      isSpeaking = false;
       speakQueueRunner();
-      // ---- ----
     }
   }
 }
@@ -297,12 +306,10 @@ function drawCenterSentence() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
-  // 모든 조동사 + 부정문 파랑 + Be동사/Do류 의문문 파랑
   const blueWords = [
     "when","where","what","why","how","who","which",
     "will","would","can","could","may","should","must","might","shall",
     "do","does","did","have","has","had","is","are","was","were","am",
-    // 부정형 (모두 포함, ' 와 없는 것 둘 다)
     "won't","wont","wouldn't","wouldnt","can't","cant","cannot","couldn't","couldnt",
     "shouldn't","shouldnt","mustn't","mustnt","mightn't","mightnt","shan't","shant",
     "needn't","neednt","oughtn't","oughtnt","isn't","isnt","aren't","arent",
@@ -328,19 +335,15 @@ function drawCenterSentence() {
     }
     let px = canvas.width / 2 - totalWidth / 2;
     for (let w = 0; w < words.length; w++) {
-      // 특수문자 및 모든 작은따옴표(', ’) 제거
       const lower = words[w].toLowerCase().replace(/[.,?’']/g, '');
 
-      // 본동사(노란색)는 한 문장에 한 번만
       if (!foundVerb && lower === mainVerb) {
         ctx.fillStyle = "#FFD600";
         foundVerb = true;
       }
-      // 각 줄의 맨 앞 단어가 blueWords에 포함되어 있으면 무조건 파랑!
       else if (w === 0 && blueWords.includes(lower)) {
         ctx.fillStyle = "#40A6FF";
       }
-      // 그 외에 조동사/부정문 파랑
       else if (blueWords.includes(lower)) {
         ctx.fillStyle = "#40A6FF";
       } else {
@@ -383,14 +386,13 @@ function startGame() {
   }
   isGameRunning = true;
   isGamePaused = false;
-  // 배경음악 시작
   try {
     bgmAudio.pause();
     bgmAudio.currentTime = 0;
   } catch (e) {}
   bgmIndex = 0;
   bgmAudio = new Audio(bgmFiles[bgmIndex]);
-  bgmAudio.volume = 0.05;
+  bgmAudio.volume = isMuted ? 0 : 0.05;
   bgmAudio.loop = false;
   bgmAudio.addEventListener('ended', playNextBgm);
   bgmAudio.play();
