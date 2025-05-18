@@ -21,22 +21,23 @@ const sentences = [
   "I’m looking forward to our trip next month.",
   "Can you recommend a good place to eat?"
 ];
-
-// 각 문장별 본동사 리스트(단어 소문자 기준)
-const mainVerbs = [
-  "arrive",    // 0
-  "believe",   // 1
-  "do",        // 2
-  "help",      // 3
-  "enjoyed",   // 4
-  "grab",      // 5
-  "have",      // 6
-  "been",      // 7
-  "like",      // 8
-  "looking",   // 9
-  "recommend"  // 10
+const translations = [
+  "너는 언제 역에 도착하니?",
+  "시간이 얼마나 빠르게 지나가는지 믿을 수 없어.",
+  "너는 주말에 보통 무엇을 하니?",
+  "이 식료품들을 안으로 옮기는 것 좀 도와줄 수 있니?",
+  "오늘 너와 함께 시간을 보내서 정말 즐거웠어.",
+  "커피 한 잔 하면서 잠시 이야기하자.",
+  "오늘 저녁에 계획 있는 거 있어?",
+  "오늘은 사무실에서 긴 하루였어.",
+  "나도 그녀와 같은 걸로 주문하고 싶어요.",
+  "다음 달 우리 여행이 기대돼.",
+  "맛있는 식당 좀 추천해줄 수 있어?"
 ];
 
+const mainVerbs = [
+  "arrive", "believe", "do", "help", "enjoyed", "grab", "have", "been", "like", "looking", "recommend"
+];
 let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
 
 const playerImg = new Image();
@@ -58,7 +59,6 @@ let bgmAudio = new Audio(bgmFiles[bgmIndex]);
 bgmAudio.volume = 0.05;
 bgmAudio.loop = false;
 
-// 볼륨 제어 관련
 const volumeBtn = document.getElementById('volumeBtn');
 let isMuted = false;
 function updateVolumeIcon() {
@@ -89,7 +89,6 @@ const sounds = {
 sounds.shoot.volume = 0.05;
 sounds.explosion.volume = 0.05;
 
-// 볼륨 자동상승 차단
 setInterval(() => {
   if (bgmAudio && bgmAudio.volume !== (isMuted ? 0 : 0.05)) {
     bgmAudio.volume = isMuted ? 0 : 0.05;
@@ -128,6 +127,14 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
+// 플레이 버튼/번역 상태
+let showPlayButton = false;
+let playButtonRect = null;
+let showTranslation = false;
+
+// pause(조작 완전 차단) 플래그
+let isActionLocked = false;
+
 // 읽기 큐 로직
 let speakQueue = [];
 let isSpeaking = false;
@@ -162,21 +169,6 @@ async function speakSentence(text, gender = 'female') {
     utter.onend = resolve;
     window.speechSynthesis.speak(utter);
   });
-}
-
-// 읽기 큐를 "최신 문장만" 읽게 개조
-async function speakQueueRunner() {
-  if (isSpeaking) return;
-  isSpeaking = true;
-  while (speakQueue.length > 0) {
-    const idx = speakQueue.shift();
-    const sentence = sentences[idx];
-    await new Promise(r => setTimeout(r, 1000)); // 1초 후 읽기
-    await speakSentence(sentence, 'female');
-    await new Promise(r => setTimeout(r, 1500));
-    await speakSentence(sentence, 'male');
-  }
-  isSpeaking = false;
 }
 
 function splitSentence(sentence) {
@@ -241,6 +233,8 @@ function startFireworks(sentence, fx, fy) {
   }
   sentenceActive = true;
   centerAlpha = 1.0;
+  showPlayButton = false;
+  showTranslation = false;
 }
 
 function updateFireworks() {
@@ -288,71 +282,94 @@ function updateFireworks() {
       fireworks = null;
       fireworksState = null;
       sentenceActive = false;
-      let idx = sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1;
+      showPlayButton = true;
+      showTranslation = false;
 
-      window.speechSynthesis.cancel();
-      speakQueue = [idx];
-      isSpeaking = false;
-      speakQueueRunner();
+      // 폭발 후 1초 뒤 여자, 1.5초 뒤 남자 목소리로 읽기
+      setTimeout(() => {
+        let idx = centerSentenceIndex;
+        if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
+        window.speechSynthesis.cancel();
+        speakSentence(sentences[idx], 'female');
+        setTimeout(() => {
+          speakSentence(sentences[idx], 'male');
+        }, 1500);
+      }, 1000);
     }
   }
 }
 
 function drawCenterSentence() {
   if (!centerSentence) return;
+
   ctx.save();
   ctx.globalAlpha = centerAlpha;
   ctx.font = "23.52px Arial";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-
-  const blueWords = [
-    "when","where","what","why","how","who","which",
-    "will","would","can","could","may","should","must","might","shall",
-    "do","does","did","have","has","had","is","are","was","were","am",
-    "won't","wont","wouldn't","wouldnt","can't","cant","cannot","couldn't","couldnt",
-    "shouldn't","shouldnt","mustn't","mustnt","mightn't","mightnt","shan't","shant",
-    "needn't","neednt","oughtn't","oughtnt","isn't","isnt","aren't","arent",
-    "wasn't","wasnt","weren't","werent","don't","dont","doesn't","doesnt",
-    "didn't","didnt","haven't","havent","hasn't","hasnt","hadn't","hadnt"
-  ];
-
   let lines = [centerSentence.line1, centerSentence.line2];
   let yBase = canvas.height / 2 - 25;
 
-  let currentIdx = centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
-  let mainVerb = mainVerbs[currentIdx];
-  let foundVerb = false;
+  let totalWidth = Math.max(
+    ...lines.map(line =>
+      line.split(" ").reduce((w, word) => w + ctx.measureText(word).width, 0) +
+      (line.split(" ").length - 1) * ctx.measureText(" ").width
+    )
+  );
 
+  // 플레이 버튼 위치/사이즈
+  const playSize = 36;
+  const btnPad = 18;
+  const btnH = playSize + btnPad * 2;
+  const btnW = playSize + btnPad * 2;
+  const btnY = yBase - 15;
+  const btnX = canvas.width / 2 - totalWidth / 2 - btnW - 18;
+
+  playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+  // 플레이 버튼 그리기
+  if (showPlayButton) {
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle = "#222";
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnW, btnH, 20);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#4CAF50";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = "#4CAF50";
+    ctx.beginPath();
+    ctx.moveTo(btnX + btnPad + 6, btnY + btnPad);
+    ctx.lineTo(btnX + btnPad + 6, btnY + btnH - btnPad);
+    ctx.lineTo(btnX + btnPad + playSize, btnY + btnH / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 문장 출력
+  let px = canvas.width / 2 - totalWidth / 2;
   for (let i = 0; i < lines.length; i++) {
-    let words = lines[i].split(" ");
-    let totalWidth = 0;
-    let wordWidths = [];
-    for (let w = 0; w < words.length; w++) {
-      wordWidths[w] = ctx.measureText(words[w]).width;
-      totalWidth += wordWidths[w];
-      if (w < words.length - 1) totalWidth += ctx.measureText(" ").width;
-    }
-    let px = canvas.width / 2 - totalWidth / 2;
-    for (let w = 0; w < words.length; w++) {
-      const lower = words[w].toLowerCase().replace(/[.,?’']/g, '');
+    ctx.fillStyle = "#fff";
+    ctx.fillText(lines[i], px, yBase + i * 30);
+  }
 
-      if (!foundVerb && lower === mainVerb) {
-        ctx.fillStyle = "#FFD600";
-        foundVerb = true;
-      }
-      else if (w === 0 && blueWords.includes(lower)) {
-        ctx.fillStyle = "#40A6FF";
-      }
-      else if (blueWords.includes(lower)) {
-        ctx.fillStyle = "#40A6FF";
-      } else {
-        ctx.fillStyle = "#fff";
-      }
-      ctx.fillText(words[w], px, yBase + i * 30);
-      px += wordWidths[w];
-      if (w < words.length - 1) px += ctx.measureText(" ").width;
-    }
+  // 번역
+  if (showTranslation) {
+    ctx.save();
+    ctx.font = "21px Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFD600";
+    ctx.shadowColor = "#111";
+    ctx.shadowBlur = 4;
+    ctx.fillText(
+      translations[centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1)],
+      canvas.width / 2,
+      yBase + 70
+    );
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -408,6 +425,10 @@ function startGame() {
   centerAlpha = 1.0;
   speakQueue = [];
   isSpeaking = false;
+  showPlayButton = false;
+  playButtonRect = null;
+  showTranslation = false;
+  isActionLocked = false;
 
   spawnEnemy();
   spawnEnemy();
@@ -447,13 +468,36 @@ function stopGame() {
   sentenceActive = false;
   speakQueue = [];
   isSpeaking = false;
+  showPlayButton = false;
+  playButtonRect = null;
+  showTranslation = false;
+  isActionLocked = false;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// ========== 이벤트 구간 ==========
+
 canvas.addEventListener('touchstart', e => {
   if (!isGameRunning || isGamePaused) return;
+  if (isActionLocked) return;
   const touch = e.touches[0];
+  const isPlayBtnTouched = showPlayButton && playButtonRect &&
+    touch.clientX >= playButtonRect.x && touch.clientX <= playButtonRect.x + playButtonRect.w &&
+    touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h;
+
+  if (isPlayBtnTouched) {
+    showTranslation = true; // 버튼은 사라지지 않음
+    isActionLocked = true;
+    let idx = centerSentenceIndex;
+    if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
+    window.speechSynthesis.cancel();
+    speakSentence(sentences[idx], 'female');
+    e.preventDefault();
+    setTimeout(() => { isActionLocked = false; }, 200);
+    return;
+  }
+  // 플레이 버튼 바깥은 항상 이동/총알 정상
   player.x = touch.clientX - player.w / 2;
   player.y = touch.clientY - player.h / 2;
   bullets.push({
@@ -467,15 +511,84 @@ canvas.addEventListener('touchstart', e => {
   e.preventDefault();
 }, { passive: false });
 
+canvas.addEventListener('mousedown', e => {
+  if (!isGameRunning || isGamePaused) return;
+  if (isActionLocked) return;
+  const isPlayBtnTouched = showPlayButton && playButtonRect &&
+    e.clientX >= playButtonRect.x && e.clientX <= playButtonRect.x + playButtonRect.w &&
+    e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h;
+
+  if (isPlayBtnTouched) {
+    showTranslation = true; // 버튼은 사라지지 않음
+    isActionLocked = true;
+    let idx = centerSentenceIndex;
+    if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
+    window.speechSynthesis.cancel();
+    speakSentence(sentences[idx], 'female');
+    e.preventDefault();
+    setTimeout(() => { isActionLocked = false; }, 200);
+    return;
+  }
+  // 플레이 버튼 바깥은 항상 이동/총알 정상
+  player.x = e.clientX - player.w / 2;
+  player.y = e.clientY - player.h / 2;
+  bullets.push({
+    x: player.x + player.w / 2 - 2.5,
+    y: player.y,
+    w: 5,
+    h: 10,
+    speed: 2.1
+  });
+  sounds.shoot.play();
+  e.preventDefault();
+});
+
 canvas.addEventListener('touchmove', e => {
   if (!isGameRunning || isGamePaused) return;
+  if (isActionLocked) return;
   const touch = e.touches[0];
-  player.x = touch.clientX - player.w / 2;
-  player.y = touch.clientY - player.h / 2;
-  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
-  e.preventDefault();
+  if (showPlayButton && playButtonRect) {
+    if (
+      touch.clientX >= playButtonRect.x && touch.clientX <= playButtonRect.x + playButtonRect.w &&
+      touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h
+    ) {
+      e.preventDefault();
+      return;
+    }
+  }
+  if (!showPlayButton ||
+      (showPlayButton && playButtonRect &&
+       !(touch.clientX >= playButtonRect.x && touch.clientX <= playButtonRect.x + playButtonRect.w &&
+         touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h))) {
+    player.x = touch.clientX - player.w / 2;
+    player.y = touch.clientY - player.h / 2;
+    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+    player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+    e.preventDefault();
+  }
 }, { passive: false });
+
+canvas.addEventListener('mousemove', e => {
+  if (!isGameRunning || isGamePaused) return;
+  if (isActionLocked) return;
+  if (showPlayButton && playButtonRect) {
+    if (
+      e.clientX >= playButtonRect.x && e.clientX <= playButtonRect.x + playButtonRect.w &&
+      e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h
+    ) {
+      return;
+    }
+  }
+  if (!showPlayButton ||
+      (showPlayButton && playButtonRect &&
+       !(e.clientX >= playButtonRect.x && e.clientX <= playButtonRect.x + playButtonRect.w &&
+         e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h))) {
+    player.x = e.clientX - player.w / 2;
+    player.y = e.clientY - player.h / 2;
+    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+    player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+  }
+});
 
 function update(delta) {
   enemies = enemies.filter(e => e.y <= canvas.height);
@@ -504,6 +617,13 @@ function update(delta) {
   });
 
   if (fireworks) updateFireworks();
+
+  // centerSentence가 사라질 때, 플레이버튼/번역 모두 같이 사라짐
+  if (!centerSentence) {
+    showPlayButton = false;
+    showTranslation = false;
+    isActionLocked = false;
+  }
 }
 
 function draw() {
@@ -520,10 +640,8 @@ function gameLoop(time) {
   if (!isGameRunning || isGamePaused) return;
   const delta = time - lastTime;
   lastTime = time;
-
   update(delta);
   draw();
-
   requestAnimationFrame(gameLoop);
 }
 
