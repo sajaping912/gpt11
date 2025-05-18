@@ -35,9 +35,6 @@ const translations = [
   "맛있는 식당 좀 추천해줄 수 있어?"
 ];
 
-const mainVerbs = [
-  "arrive", "believe", "do", "help", "enjoyed", "grab", "have", "been", "like", "looking", "recommend"
-];
 let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
 
 const playerImg = new Image();
@@ -135,10 +132,6 @@ let showTranslation = false;
 // pause(조작 완전 차단) 플래그
 let isActionLocked = false;
 
-// 읽기 큐 로직
-let speakQueue = [];
-let isSpeaking = false;
-
 async function getVoice(lang = 'en-US', gender = 'female') {
   let voices = window.speechSynthesis.getVoices();
   if (!voices.length) {
@@ -233,7 +226,6 @@ function startFireworks(sentence, fx, fy) {
   }
   sentenceActive = true;
   centerAlpha = 1.0;
-  showPlayButton = false;
   showTranslation = false;
 }
 
@@ -285,7 +277,6 @@ function updateFireworks() {
       showPlayButton = true;
       showTranslation = false;
 
-      // 폭발 후 1초 뒤 여자, 1.5초 뒤 남자 목소리로 읽기
       setTimeout(() => {
         let idx = centerSentenceIndex;
         if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
@@ -299,64 +290,56 @@ function updateFireworks() {
   }
 }
 
+// === 중앙정렬/플레이버튼 위치수정 drawCenterSentence ===
 function drawCenterSentence() {
   if (!centerSentence) return;
 
   ctx.save();
   ctx.globalAlpha = centerAlpha;
   ctx.font = "23.52px Arial";
-  ctx.textAlign = "left";
+  ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   let lines = [centerSentence.line1, centerSentence.line2];
-  let yBase = canvas.height / 2 - 25;
 
-  let totalWidth = Math.max(
-    ...lines.map(line =>
-      line.split(" ").reduce((w, word) => w + ctx.measureText(word).width, 0) +
-      (line.split(" ").length - 1) * ctx.measureText(" ").width
-    )
-  );
+  let lineHeight = 30;
+  let blockHeight = lines.length * lineHeight;
+  let yBase = canvas.height / 2 - blockHeight / 2 + lineHeight / 2;
 
-  // 플레이 버튼 위치/사이즈
-  const playSize = 36;
-  const btnPad = 18;
+  // 플레이 버튼: x=10, y 기존보다 10px 아래
+  const playSize = 36 * 0.49;
+  const btnPad = 18 * 0.49;
   const btnH = playSize + btnPad * 2;
   const btnW = playSize + btnPad * 2;
-  const btnY = yBase - 15;
-  const btnX = canvas.width / 2 - totalWidth / 2 - btnW - 18;
-
+  const btnY = canvas.height / 2 - 15 - 20 + 10;
+  const btnX = 10;
   playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
 
-  // 플레이 버튼 그리기
   if (showPlayButton) {
     ctx.save();
     ctx.globalAlpha = 0.82;
     ctx.fillStyle = "#222";
     ctx.beginPath();
-    ctx.roundRect(btnX, btnY, btnW, btnH, 20);
+    ctx.roundRect(btnX, btnY, btnW, btnH, 20 * 0.49);
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.strokeStyle = "#4CAF50";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3 * 0.49;
     ctx.stroke();
     ctx.fillStyle = "#4CAF50";
     ctx.beginPath();
-    ctx.moveTo(btnX + btnPad + 6, btnY + btnPad);
-    ctx.lineTo(btnX + btnPad + 6, btnY + btnH - btnPad);
+    ctx.moveTo(btnX + btnPad + 6 * 0.49, btnY + btnPad);
+    ctx.lineTo(btnX + btnPad + 6 * 0.49, btnY + btnH - btnPad);
     ctx.lineTo(btnX + btnPad + playSize, btnY + btnH / 2);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
   }
 
-  // 문장 출력
-  let px = canvas.width / 2 - totalWidth / 2;
   for (let i = 0; i < lines.length; i++) {
     ctx.fillStyle = "#fff";
-    ctx.fillText(lines[i], px, yBase + i * 30);
+    ctx.fillText(lines[i], canvas.width / 2, yBase + i * lineHeight);
   }
 
-  // 번역
   if (showTranslation) {
     ctx.save();
     ctx.font = "21px Arial";
@@ -367,12 +350,13 @@ function drawCenterSentence() {
     ctx.fillText(
       translations[centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1)],
       canvas.width / 2,
-      yBase + 70
+      yBase + lines.length * lineHeight + 10
     );
     ctx.restore();
   }
   ctx.restore();
 }
+// === drawCenterSentence 끝 ===
 
 function drawFireworks() {
   if (!fireworks) return;
@@ -396,6 +380,66 @@ function spawnEnemy() {
   enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false });
 }
 
+function update(delta) {
+  enemies = enemies.filter(e => e.y <= canvas.height);
+  while (enemies.length < 2) spawnEnemy();
+  enemies.forEach(e => e.y += 1);
+
+  bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; });
+  enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
+
+  bullets.forEach((b, bi) => {
+    enemies.forEach((e, ei) => {
+      if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+        if (!fireworks && !sentenceActive) {
+          nextSentence = sentences[sentenceIndex];
+          sentenceIndex = (sentenceIndex + 1) % sentences.length;
+          localStorage.setItem('sentenceIndex', sentenceIndex);
+          const fx = e.x + e.w / 2;
+          const fy = e.y + e.h / 2;
+          startFireworks(nextSentence, fx, fy);
+          sounds.explosion.play();
+        }
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
+      }
+    });
+  });
+
+  if (fireworks) updateFireworks();
+
+  if (!centerSentence) {
+    showPlayButton = false;
+    showTranslation = false;
+    isActionLocked = false;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+  enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
+  ctx.fillStyle = 'red';
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+  drawCenterSentence();
+  drawFireworks();
+}
+
+function gameLoop(time) {
+  if (!isGameRunning || isGamePaused) return;
+  const delta = time - lastTime;
+  lastTime = time;
+  update(delta);
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// 버튼 이벤트 등록
+document.getElementById('startBtn').onclick = startGame;
+document.getElementById('pauseBtn').onclick = togglePause;
+document.getElementById('stopBtn').onclick = stopGame;
+
+// start/pause/stop 함수 정의
 function startGame() {
   if (!assetsLoaded) {
     alert("이미지 로딩 중입니다. 잠시 후 다시 시도하세요.");
@@ -423,8 +467,6 @@ function startGame() {
   centerSentenceIndex = null;
   sentenceActive = false;
   centerAlpha = 1.0;
-  speakQueue = [];
-  isSpeaking = false;
   showPlayButton = false;
   playButtonRect = null;
   showTranslation = false;
@@ -466,8 +508,6 @@ function stopGame() {
   centerSentenceIndex = null;
   centerAlpha = 0;
   sentenceActive = false;
-  speakQueue = [];
-  isSpeaking = false;
   showPlayButton = false;
   playButtonRect = null;
   showTranslation = false;
@@ -476,7 +516,7 @@ function stopGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// ========== 이벤트 구간 ==========
+// ===== 터치/마우스 조작 이벤트 =====
 
 canvas.addEventListener('touchstart', e => {
   if (!isGameRunning || isGamePaused) return;
@@ -487,7 +527,7 @@ canvas.addEventListener('touchstart', e => {
     touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h;
 
   if (isPlayBtnTouched) {
-    showTranslation = true; // 버튼은 사라지지 않음
+    showTranslation = true;
     isActionLocked = true;
     let idx = centerSentenceIndex;
     if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
@@ -497,7 +537,6 @@ canvas.addEventListener('touchstart', e => {
     setTimeout(() => { isActionLocked = false; }, 200);
     return;
   }
-  // 플레이 버튼 바깥은 항상 이동/총알 정상
   player.x = touch.clientX - player.w / 2;
   player.y = touch.clientY - player.h / 2;
   bullets.push({
@@ -519,7 +558,7 @@ canvas.addEventListener('mousedown', e => {
     e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h;
 
   if (isPlayBtnTouched) {
-    showTranslation = true; // 버튼은 사라지지 않음
+    showTranslation = true;
     isActionLocked = true;
     let idx = centerSentenceIndex;
     if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
@@ -529,7 +568,6 @@ canvas.addEventListener('mousedown', e => {
     setTimeout(() => { isActionLocked = false; }, 200);
     return;
   }
-  // 플레이 버튼 바깥은 항상 이동/총알 정상
   player.x = e.clientX - player.w / 2;
   player.y = e.clientY - player.h / 2;
   bullets.push({
@@ -589,62 +627,3 @@ canvas.addEventListener('mousemove', e => {
     player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
   }
 });
-
-function update(delta) {
-  enemies = enemies.filter(e => e.y <= canvas.height);
-  while (enemies.length < 2) spawnEnemy();
-  enemies.forEach(e => e.y += 1);
-
-  bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; });
-  enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
-
-  bullets.forEach((b, bi) => {
-    enemies.forEach((e, ei) => {
-      if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
-        if (!fireworks && !sentenceActive) {
-          nextSentence = sentences[sentenceIndex];
-          sentenceIndex = (sentenceIndex + 1) % sentences.length;
-          localStorage.setItem('sentenceIndex', sentenceIndex);
-          const fx = e.x + e.w / 2;
-          const fy = e.y + e.h / 2;
-          startFireworks(nextSentence, fx, fy);
-          sounds.explosion.play();
-        }
-        enemies.splice(ei, 1);
-        bullets.splice(bi, 1);
-      }
-    });
-  });
-
-  if (fireworks) updateFireworks();
-
-  // centerSentence가 사라질 때, 플레이버튼/번역 모두 같이 사라짐
-  if (!centerSentence) {
-    showPlayButton = false;
-    showTranslation = false;
-    isActionLocked = false;
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-  enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
-  ctx.fillStyle = 'red';
-  bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-  drawCenterSentence();
-  drawFireworks();
-}
-
-function gameLoop(time) {
-  if (!isGameRunning || isGamePaused) return;
-  const delta = time - lastTime;
-  lastTime = time;
-  update(delta);
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-document.getElementById('startBtn').onclick = startGame;
-document.getElementById('pauseBtn').onclick = togglePause;
-document.getElementById('stopBtn').onclick = stopGame;
