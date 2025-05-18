@@ -11,26 +11,28 @@ window.addEventListener('resize', () => {
 const sentences = [
   "When will you arrive at the station?",
   "I can’t believe how fast time goes by.",
-  "What do you usually do on weekends?",
+  "What are you doing right now?",
   "Could you help me carry these groceries inside?",
-  "I really enjoyed spending time with you today.",
+  "I have been waiting for you since morning.",
+  "She is reading a book.",
+  "They have been working all day.",
   "Let’s grab a coffee and talk for a while.",
   "Do you have any plans for this evening?",
   "It’s been a long day at the office.",
-  "I’d like to order the same as her.",
   "I’m looking forward to our trip next month.",
   "Can you recommend a good place to eat?"
 ];
 const translations = [
   "너는 언제 역에 도착하니?",
   "시간이 얼마나 빠르게 지나가는지 믿을 수 없어.",
-  "너는 주말에 보통 무엇을 하니?",
+  "너 지금 뭐하고 있니?",
   "이 식료품들을 안으로 옮기는 것 좀 도와줄 수 있니?",
-  "오늘 너와 함께 시간을 보내서 정말 즐거웠어.",
+  "나는 아침부터 너를 기다리고 있었어.",
+  "그녀는 책을 읽고 있어.",
+  "그들은 하루 종일 일하고 있어.",
   "커피 한 잔 하면서 잠시 이야기하자.",
   "오늘 저녁에 계획 있는 거 있어?",
   "오늘은 사무실에서 긴 하루였어.",
-  "나도 그녀와 같은 걸로 주문하고 싶어요.",
   "다음 달 우리 여행이 기대돼.",
   "맛있는 식당 좀 추천해줄 수 있어?"
 ];
@@ -124,46 +126,172 @@ let centerAlpha = 1.0;
 let nextSentence = null;
 let sentenceActive = false;
 
-// 플레이 버튼/번역 상태
 let showPlayButton = false;
 let playButtonRect = null;
 let showTranslation = false;
-
-// pause(조작 완전 차단) 플래그
 let isActionLocked = false;
 
-async function getVoice(lang = 'en-US', gender = 'female') {
-  let voices = window.speechSynthesis.getVoices();
-  if (!voices.length) {
-    await new Promise(resolve => {
-      window.speechSynthesis.onvoiceschanged = resolve;
-    });
-    voices = window.speechSynthesis.getVoices();
+// ===== 색상 분류 함수들 =====
+const MODAL_AUX = [
+  "can","can't","cannot","could","couldn't","will","would","shall","should",
+  "may","might","must","won't","wouldn't","shan't","shouldn't","mayn't","mightn't","mustn't"
+];
+const DO_AUX = [
+  "do", "does", "did", "don't", "doesn't", "didn't"
+];
+// 명사성 ing 단어들 (파랑처리 절대 안 됨)
+const notVerbIng = [
+  "morning", "evening", "everything", "anything", "nothing", "something",
+  "building", "ceiling", "meeting", "feeling", "wedding", "clothing"
+];
+
+function isAux(word) {
+  return MODAL_AUX.includes(word.toLowerCase()) || DO_AUX.includes(word.toLowerCase());
+}
+function isWh(word) {
+  const whs = ["what","when","where","who","whom","whose","which","why","how"];
+  return whs.includes(word.toLowerCase());
+}
+function isVerb(word) {
+  // 동사 원형 리스트에 필요한 모든 동사 추가(원형만!)
+  const verbs = [
+    "arrive", "believe", "help", "carry", "enjoy", "spend", "grab", "talk", "order", "look", "recommend", "eat",
+    "plan", "make", "like", "love", "hate", "go", "read", "play", "work", "find", "get", "enjoyed", "forward", "wait"
+  ];
+  return verbs.includes(word.toLowerCase());
+}
+function isVing(word) {
+  // 명사성 ing는 무조건 false, 동사+ing만 true
+  let lw = word.toLowerCase();
+  if (notVerbIng.includes(lw)) return false;
+  if (/^[a-zA-Z]+ing$/.test(lw)) {
+    let base = lw.slice(0, -3);
+    return isVerb(base) || (base.endsWith('y') && isVerb(base.slice(0, -1) + 'ie'));
   }
-  const filtered = voices.filter(v =>
-    v.lang === lang &&
-    (gender === 'female'
-      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('samantha')
-      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('daniel'))
-  );
-  if (filtered.length) return filtered[0];
-  const fallback = voices.filter(v => v.lang === lang);
-  return fallback.length ? fallback[0] : null;
+  return false;
+}
+function isBeen(word) {
+  return word.toLowerCase() === 'been';
+}
+function isQuestion(sentence) {
+  return sentence.trim().endsWith('?');
 }
 
-async function speakSentence(text, gender = 'female') {
-  await getVoice();
-  return new Promise(async resolve => {
-    const utter = new window.SpeechSynthesisUtterance(text);
-    utter.lang = 'en-US';
-    utter.rate = 1.0;
-    utter.pitch = gender === 'female' ? 1.08 : 1.0;
-    utter.voice = await getVoice('en-US', gender);
-    utter.onend = resolve;
-    window.speechSynthesis.speak(utter);
+// ===== 중앙 문장 렌더링 =====
+function drawCenterSentence() {
+  if (!centerSentence) return;
+
+  ctx.save();
+  ctx.globalAlpha = centerAlpha;
+  ctx.font = "23.52px Arial";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  let lines = [centerSentence.line1, centerSentence.line2];
+
+  let lineHeight = 30;
+  let blockHeight = lines.length * lineHeight;
+  let yBase = canvas.height / 2 - blockHeight / 2 + lineHeight / 2;
+
+  // 플레이 버튼
+  const playSize = 36 * 0.49;
+  const btnPad = 18 * 0.49;
+  const btnH = playSize + btnPad * 2;
+  const btnW = playSize + btnPad * 2;
+  const btnY = canvas.height / 2 - 15 - 20 + 10 + 5;
+  const btnX = 10;
+  playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+  if (showPlayButton) {
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle = "#222";
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnW, btnH, 20 * 0.49);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#4CAF50";
+    ctx.lineWidth = 3 * 0.49;
+    ctx.stroke();
+    ctx.fillStyle = "#4CAF50";
+    ctx.beginPath();
+    ctx.moveTo(btnX + btnPad + 6 * 0.49, btnY + btnPad);
+    ctx.lineTo(btnX + btnPad + 6 * 0.49, btnY + btnH - btnPad);
+    ctx.lineTo(btnX + btnPad + playSize, btnY + btnH / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // --- 색상 분류 적용 ---
+  let verbColored = false;
+  const isQ = isQuestion((centerSentence.line1 + " " + centerSentence.line2).trim());
+  for (let i = 0; i < lines.length; i++) {
+    const words = lines[i].split(" ");
+    let wordWidths = words.map(w => ctx.measureText(w).width);
+    let spaceWidth = ctx.measureText(" ").width;
+    let totalWidth = wordWidths.reduce((a, b) => a + b, 0) + spaceWidth * (words.length - 1);
+    let x = (canvas.width - totalWidth) / 2;
+    let y = yBase + i * lineHeight;
+
+    for (let j = 0; j < words.length; j++) {
+      let raw = words[j];
+      let word = raw.replace(/[^a-zA-Z']/g, "");
+      let lower = word.toLowerCase();
+      let color = "#fff";
+      // 의문문 첫단어(조동사/의문사) 파랑
+      if (isQ && i === 0 && j === 0 && (isAux(lower) || isWh(lower))) {
+        color = "#40b8ff";
+      }
+      // 본동사 1개만 노랑
+      else if (isVerb(lower) && !verbColored) {
+        color = "#FFD600";
+        verbColored = true;
+      }
+      // 조동사/조동사부정/been 파랑
+      else if (isAux(lower) || isBeen(lower)) {
+        color = "#40b8ff";
+      }
+      // 동사+ing(동사만, 명사성 ing 단어 제외) 파랑
+      else if (isVing(lower)) {
+        color = "#40b8ff";
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(raw, x, y);
+      x += wordWidths[j] + spaceWidth;
+    }
+  }
+
+  if (showTranslation) {
+    ctx.save();
+    ctx.font = "21px Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFD600";
+    ctx.shadowColor = "#111";
+    ctx.shadowBlur = 4;
+    ctx.fillText(
+      translations[centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1)],
+      canvas.width / 2,
+      yBase + lines.length * lineHeight + 10
+    );
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ----- fireworks, splitSentence, getClockwiseAngle, startFireworks, updateFireworks, getVoice, speakSentence -----
+function drawFireworks() {
+  if (!fireworks) return;
+  ctx.save();
+  ctx.font = "23.52px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  fireworks.forEach(fw => {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = fw.color;
+    ctx.fillText(fw.text, fw.x, fw.y);
   });
+  ctx.restore();
 }
-
 function splitSentence(sentence) {
   const words = sentence.split(" ");
   const half = Math.ceil(words.length / 2);
@@ -171,11 +299,9 @@ function splitSentence(sentence) {
   const line2 = words.slice(half).join(" ");
   return [line1, line2];
 }
-
 function getClockwiseAngle(index, total) {
   return -Math.PI / 2 + (index * 2 * Math.PI) / total;
 }
-
 function startFireworks(sentence, fx, fy) {
   const [line1, line2] = splitSentence(sentence);
   const lines = [line1, line2];
@@ -228,7 +354,6 @@ function startFireworks(sentence, fx, fy) {
   centerAlpha = 1.0;
   showTranslation = false;
 }
-
 function updateFireworks() {
   if (!fireworks) return false;
 
@@ -289,87 +414,35 @@ function updateFireworks() {
     }
   }
 }
-
-// === 중앙정렬/플레이버튼 위치수정 drawCenterSentence ===
-function drawCenterSentence() {
-  if (!centerSentence) return;
-
-  ctx.save();
-  ctx.globalAlpha = centerAlpha;
-  ctx.font = "23.52px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  let lines = [centerSentence.line1, centerSentence.line2];
-
-  let lineHeight = 30;
-  let blockHeight = lines.length * lineHeight;
-  let yBase = canvas.height / 2 - blockHeight / 2 + lineHeight / 2;
-
-  // 플레이 버튼: x=10, y 기존보다 10px 아래
-  const playSize = 36 * 0.49;
-  const btnPad = 18 * 0.49;
-  const btnH = playSize + btnPad * 2;
-  const btnW = playSize + btnPad * 2;
-  const btnY = canvas.height / 2 - 15 - 20 + 10 + 10;
-  const btnX = 10;
-  playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
-
-  if (showPlayButton) {
-    ctx.save();
-    ctx.globalAlpha = 0.82;
-    ctx.fillStyle = "#222";
-    ctx.beginPath();
-    ctx.roundRect(btnX, btnY, btnW, btnH, 20 * 0.49);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = "#4CAF50";
-    ctx.lineWidth = 3 * 0.49;
-    ctx.stroke();
-    ctx.fillStyle = "#4CAF50";
-    ctx.beginPath();
-    ctx.moveTo(btnX + btnPad + 6 * 0.49, btnY + btnPad);
-    ctx.lineTo(btnX + btnPad + 6 * 0.49, btnY + btnH - btnPad);
-    ctx.lineTo(btnX + btnPad + playSize, btnY + btnH / 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+async function getVoice(lang = 'en-US', gender = 'female') {
+  let voices = window.speechSynthesis.getVoices();
+  if (!voices.length) {
+    await new Promise(resolve => {
+      window.speechSynthesis.onvoiceschanged = resolve;
+    });
+    voices = window.speechSynthesis.getVoices();
   }
-
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillStyle = "#fff";
-    ctx.fillText(lines[i], canvas.width / 2, yBase + i * lineHeight);
-  }
-
-  if (showTranslation) {
-    ctx.save();
-    ctx.font = "21px Arial";
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#FFD600";
-    ctx.shadowColor = "#111";
-    ctx.shadowBlur = 4;
-    ctx.fillText(
-      translations[centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1)],
-      canvas.width / 2,
-      yBase + lines.length * lineHeight + 10
-    );
-    ctx.restore();
-  }
-  ctx.restore();
+  const filtered = voices.filter(v =>
+    v.lang === lang &&
+    (gender === 'female'
+      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('samantha')
+      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('daniel'))
+  );
+  if (filtered.length) return filtered[0];
+  const fallback = voices.filter(v => v.lang === lang);
+  return fallback.length ? fallback[0] : null;
 }
-// === drawCenterSentence 끝 ===
-
-function drawFireworks() {
-  if (!fireworks) return;
-  ctx.save();
-  ctx.font = "23.52px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  fireworks.forEach(fw => {
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = fw.color;
-    ctx.fillText(fw.text, fw.x, fw.y);
+async function speakSentence(text, gender = 'female') {
+  await getVoice();
+  return new Promise(async resolve => {
+    const utter = new window.SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = 1.0;
+    utter.pitch = gender === 'female' ? 1.08 : 1.0;
+    utter.voice = await getVoice('en-US', gender);
+    utter.onend = resolve;
+    window.speechSynthesis.speak(utter);
   });
-  ctx.restore();
 }
 
 function spawnEnemy() {
@@ -379,7 +452,6 @@ function spawnEnemy() {
   const y = Math.random() * canvas.height * 0.2 + 20;
   enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false });
 }
-
 function update(delta) {
   enemies = enemies.filter(e => e.y <= canvas.height);
   while (enemies.length < 2) spawnEnemy();
@@ -414,7 +486,6 @@ function update(delta) {
     isActionLocked = false;
   }
 }
-
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
@@ -422,9 +493,8 @@ function draw() {
   ctx.fillStyle = 'red';
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
   drawCenterSentence();
-  drawFireworks();
+  if (fireworks) drawFireworks();
 }
-
 function gameLoop(time) {
   if (!isGameRunning || isGamePaused) return;
   const delta = time - lastTime;
@@ -433,13 +503,9 @@ function gameLoop(time) {
   draw();
   requestAnimationFrame(gameLoop);
 }
-
-// 버튼 이벤트 등록
 document.getElementById('startBtn').onclick = startGame;
 document.getElementById('pauseBtn').onclick = togglePause;
 document.getElementById('stopBtn').onclick = stopGame;
-
-// start/pause/stop 함수 정의
 function startGame() {
   if (!assetsLoaded) {
     alert("이미지 로딩 중입니다. 잠시 후 다시 시도하세요.");
@@ -481,7 +547,6 @@ function startGame() {
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
 }
-
 function togglePause() {
   if (!isGameRunning) return;
   isGamePaused = !isGamePaused;
@@ -492,7 +557,6 @@ function togglePause() {
     requestAnimationFrame(gameLoop);
   }
 }
-
 function stopGame() {
   isGameRunning = false;
   isGamePaused = false;
@@ -516,15 +580,18 @@ function stopGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// ===== 터치/마우스 조작 이벤트 =====
+// ===== 플레이버튼 터치 영역 확장 (좌우상하 10px) =====
+const expandedMargin = 10;
 
 canvas.addEventListener('touchstart', e => {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked) return;
   const touch = e.touches[0];
   const isPlayBtnTouched = showPlayButton && playButtonRect &&
-    touch.clientX >= playButtonRect.x && touch.clientX <= playButtonRect.x + playButtonRect.w &&
-    touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h;
+    touch.clientX >= (playButtonRect.x - expandedMargin) &&
+    touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+    touch.clientY >= (playButtonRect.y - expandedMargin) &&
+    touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
 
   if (isPlayBtnTouched) {
     showTranslation = true;
@@ -554,8 +621,10 @@ canvas.addEventListener('mousedown', e => {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked) return;
   const isPlayBtnTouched = showPlayButton && playButtonRect &&
-    e.clientX >= playButtonRect.x && e.clientX <= playButtonRect.x + playButtonRect.w &&
-    e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h;
+    e.clientX >= (playButtonRect.x - expandedMargin) &&
+    e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+    e.clientY >= (playButtonRect.y - expandedMargin) &&
+    e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
 
   if (isPlayBtnTouched) {
     showTranslation = true;
@@ -587,8 +656,10 @@ canvas.addEventListener('touchmove', e => {
   const touch = e.touches[0];
   if (showPlayButton && playButtonRect) {
     if (
-      touch.clientX >= playButtonRect.x && touch.clientX <= playButtonRect.x + playButtonRect.w &&
-      touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h
+      touch.clientX >= (playButtonRect.x - expandedMargin) &&
+      touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+      touch.clientY >= (playButtonRect.y - expandedMargin) &&
+      touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)
     ) {
       e.preventDefault();
       return;
@@ -596,8 +667,12 @@ canvas.addEventListener('touchmove', e => {
   }
   if (!showPlayButton ||
       (showPlayButton && playButtonRect &&
-       !(touch.clientX >= playButtonRect.x && touch.clientX <= playButtonRect.x + playButtonRect.w &&
-         touch.clientY >= playButtonRect.y && touch.clientY <= playButtonRect.y + playButtonRect.h))) {
+       !(
+         touch.clientX >= (playButtonRect.x - expandedMargin) &&
+         touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+         touch.clientY >= (playButtonRect.y - expandedMargin) &&
+         touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)
+       ))) {
     player.x = touch.clientX - player.w / 2;
     player.y = touch.clientY - player.h / 2;
     player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
@@ -611,16 +686,22 @@ canvas.addEventListener('mousemove', e => {
   if (isActionLocked) return;
   if (showPlayButton && playButtonRect) {
     if (
-      e.clientX >= playButtonRect.x && e.clientX <= playButtonRect.x + playButtonRect.w &&
-      e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h
+      e.clientX >= (playButtonRect.x - expandedMargin) &&
+      e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+      e.clientY >= (playButtonRect.y - expandedMargin) &&
+      e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)
     ) {
       return;
     }
   }
   if (!showPlayButton ||
       (showPlayButton && playButtonRect &&
-       !(e.clientX >= playButtonRect.x && e.clientX <= playButtonRect.x + playButtonRect.w &&
-         e.clientY >= playButtonRect.y && e.clientY <= playButtonRect.y + playButtonRect.h))) {
+       !(
+         e.clientX >= (playButtonRect.x - expandedMargin) &&
+         e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+         e.clientY >= (playButtonRect.y - expandedMargin) &&
+         e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)
+       ))) {
     player.x = e.clientX - player.w / 2;
     player.y = e.clientY - player.h / 2;
     player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
