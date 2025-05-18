@@ -310,7 +310,7 @@ function drawCenterSentence() {
   const btnPad = 18 * 0.49;
   const btnH = playSize + btnPad * 2;
   const btnW = playSize + btnPad * 2;
-  const btnY = canvas.height / 2 - 15 - 20 + 10;
+  const btnY = canvas.height / 2 - 15 - 20 + 10 + 10;
   const btnX = 10;
   playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
 
