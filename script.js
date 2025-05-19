@@ -41,7 +41,15 @@ let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
 
 const playerImg = new Image();
 playerImg.src = 'images/player.png';
-const enemyImgs = ['images/enemy1.png', 'images/enemy2.png'].map(src => {
+
+// enemy 이미지 5개
+const enemyImgs = [
+  'images/enemy1.png',
+  'images/enemy2.png',
+  'images/enemy3.png',
+  'images/enemy4.png',
+  'images/enemy5.png'
+].map(src => {
   const img = new Image();
   img.src = src;
   return img;
@@ -98,7 +106,7 @@ let assetsLoaded = false;
 let loadedImages = 0;
 function onImageLoad() {
   loadedImages++;
-  if (loadedImages >= 3) assetsLoaded = true;
+  if (loadedImages >= 6) assetsLoaded = true; // player 1 + enemy 5 = 6
 }
 playerImg.onload = onImageLoad;
 enemyImgs.forEach(img => img.onload = onImageLoad);
@@ -139,7 +147,6 @@ const MODAL_AUX = [
 const DO_AUX = [
   "do", "does", "did", "don't", "doesn't", "didn't"
 ];
-// 명사성 ing 단어들 (파랑처리 절대 안 됨)
 const notVerbIng = [
   "morning", "evening", "everything", "anything", "nothing", "something",
   "building", "ceiling", "meeting", "feeling", "wedding", "clothing"
@@ -153,7 +160,6 @@ function isWh(word) {
   return whs.includes(word.toLowerCase());
 }
 function isVerb(word) {
-  // 동사 원형 리스트에 필요한 모든 동사 추가(원형만!)
   const verbs = [
     "arrive", "believe", "help", "carry", "enjoy", "spend", "grab", "talk", "order", "look", "recommend", "eat",
     "plan", "make", "like", "love", "hate", "go", "read", "play", "work", "find", "get", "enjoyed", "forward", "wait"
@@ -161,7 +167,6 @@ function isVerb(word) {
   return verbs.includes(word.toLowerCase());
 }
 function isVing(word) {
-  // 명사성 ing는 무조건 false, 동사+ing만 true
   let lw = word.toLowerCase();
   if (notVerbIng.includes(lw)) return false;
   if (/^[a-zA-Z]+ing$/.test(lw)) {
@@ -192,7 +197,6 @@ function drawCenterSentence() {
   let blockHeight = lines.length * lineHeight;
   let yBase = canvas.height / 2 - blockHeight / 2 + lineHeight / 2;
 
-  // 플레이 버튼
   const playSize = 36 * 0.49;
   const btnPad = 18 * 0.49;
   const btnH = playSize + btnPad * 2;
@@ -222,7 +226,6 @@ function drawCenterSentence() {
     ctx.restore();
   }
 
-  // --- 색상 분류 적용 ---
   let verbColored = false;
   const isQ = isQuestion((centerSentence.line1 + " " + centerSentence.line2).trim());
   for (let i = 0; i < lines.length; i++) {
@@ -238,21 +241,14 @@ function drawCenterSentence() {
       let word = raw.replace(/[^a-zA-Z']/g, "");
       let lower = word.toLowerCase();
       let color = "#fff";
-      // 의문문 첫단어(조동사/의문사) 파랑
       if (isQ && i === 0 && j === 0 && (isAux(lower) || isWh(lower))) {
         color = "#40b8ff";
-      }
-      // 본동사 1개만 노랑
-      else if (isVerb(lower) && !verbColored) {
+      } else if (isVerb(lower) && !verbColored) {
         color = "#FFD600";
         verbColored = true;
-      }
-      // 조동사/조동사부정/been 파랑
-      else if (isAux(lower) || isBeen(lower)) {
+      } else if (isAux(lower) || isBeen(lower)) {
         color = "#40b8ff";
-      }
-      // 동사+ing(동사만, 명사성 ing 단어 제외) 파랑
-      else if (isVing(lower)) {
+      } else if (isVing(lower)) {
         color = "#40b8ff";
       }
       ctx.fillStyle = color;
@@ -278,7 +274,6 @@ function drawCenterSentence() {
   ctx.restore();
 }
 
-// ----- fireworks, splitSentence, getClockwiseAngle, startFireworks, updateFireworks, getVoice, speakSentence -----
 function drawFireworks() {
   if (!fireworks) return;
   ctx.save();
@@ -402,7 +397,6 @@ function updateFireworks() {
       showPlayButton = true;
       showTranslation = false;
 
-      // ---- 여기 수정: 폭발 후 0.8초 뒤 여성, 여성 끝난 후 0.8초 뒤 남성 ----
       setTimeout(() => {
         let idx = centerSentenceIndex;
         if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
@@ -410,10 +404,9 @@ function updateFireworks() {
         speakSentence(sentences[idx], 'female').then(() => {
           setTimeout(() => {
             speakSentence(sentences[idx], 'male');
-          }, 800); // 여성 끝난 뒤 0.8초 후 남성
+          }, 800);
         });
-      }, 800); // 폭발 후 0.8초 뒤 여성
-      // ---------------------------------------------------------
+      }, 800);
     }
   }
 }
@@ -453,7 +446,7 @@ function spawnEnemy() {
   const img = enemyImgs[idx];
   const x = Math.random() * (canvas.width - ENEMY_SIZE);
   const y = Math.random() * canvas.height * 0.2 + 20;
-  enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false });
+  enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false, imgIndex: idx });
 }
 function update(delta) {
   enemies = enemies.filter(e => e.y <= canvas.height);
@@ -492,7 +485,18 @@ function update(delta) {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-  enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
+
+  enemies.forEach(e => {
+    // enemy2.png (index 1)만 30% 크게
+    if (e.imgIndex === 1) {
+      const w = ENEMY_SIZE * 1.3;
+      const h = ENEMY_SIZE * 1.3;
+      ctx.drawImage(e.img, e.x - (w - ENEMY_SIZE) / 2, e.y - (h - ENEMY_SIZE) / 2, w, h);
+    } else {
+      ctx.drawImage(e.img, e.x, e.y, ENEMY_SIZE, ENEMY_SIZE);
+    }
+  });
+
   ctx.fillStyle = 'red';
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
   drawCenterSentence();
@@ -583,7 +587,6 @@ function stopGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// ===== 플레이버튼 터치 영역 확장 (좌우상하 10px) =====
 const expandedMargin = 10;
 
 canvas.addEventListener('touchstart', e => {
