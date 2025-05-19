@@ -263,7 +263,7 @@ function drawCenterSentence() {
 
   if (showTranslation) {
     ctx.save();
-    ctx.font = "21px Arial";
+    ctx.font = "18.9px Arial"; // 21px에서 10% 줄임
     ctx.textAlign = "center";
     ctx.fillStyle = "#FFD600";
     ctx.shadowColor = "#111";
@@ -402,15 +402,18 @@ function updateFireworks() {
       showPlayButton = true;
       showTranslation = false;
 
+      // ---- 여기 수정: 폭발 후 0.8초 뒤 여성, 여성 끝난 후 0.8초 뒤 남성 ----
       setTimeout(() => {
         let idx = centerSentenceIndex;
         if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
         window.speechSynthesis.cancel();
-        speakSentence(sentences[idx], 'female');
-        setTimeout(() => {
-          speakSentence(sentences[idx], 'male');
-        }, 1500);
-      }, 1000);
+        speakSentence(sentences[idx], 'female').then(() => {
+          setTimeout(() => {
+            speakSentence(sentences[idx], 'male');
+          }, 800); // 여성 끝난 뒤 0.8초 후 남성
+        });
+      }, 800); // 폭발 후 0.8초 뒤 여성
+      // ---------------------------------------------------------
     }
   }
 }
@@ -599,7 +602,11 @@ canvas.addEventListener('touchstart', e => {
     let idx = centerSentenceIndex;
     if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
     window.speechSynthesis.cancel();
-    speakSentence(sentences[idx], 'female');
+    speakSentence(sentences[idx], 'female').then(() => {
+      setTimeout(() => {
+        speakSentence(sentences[idx], 'male');
+      }, 800);
+    });
     e.preventDefault();
     setTimeout(() => { isActionLocked = false; }, 200);
     return;
@@ -632,7 +639,11 @@ canvas.addEventListener('mousedown', e => {
     let idx = centerSentenceIndex;
     if (idx == null) idx = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
     window.speechSynthesis.cancel();
-    speakSentence(sentences[idx], 'female');
+    speakSentence(sentences[idx], 'female').then(() => {
+      setTimeout(() => {
+        speakSentence(sentences[idx], 'male');
+      }, 800);
+    });
     e.preventDefault();
     setTimeout(() => { isActionLocked = false; }, 200);
     return;
