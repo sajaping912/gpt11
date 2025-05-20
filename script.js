@@ -1,5 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const coffeeSteamVideo = document.getElementById('coffeeSteamVideo'); // 김 효과 비디오 요소
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -42,7 +43,6 @@ let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
 const playerImg = new Image();
 playerImg.src = 'images/player.png';
 
-// enemy 이미지 5개
 const enemyImgs = [
   'images/enemy1.png',
   'images/enemy2.png',
@@ -102,14 +102,73 @@ setInterval(() => {
   }
 }, 1000);
 
-let assetsLoaded = false;
-let loadedImages = 0;
-function onImageLoad() {
-  loadedImages++;
-  if (loadedImages >= 6) assetsLoaded = true; // player 1 + enemy 5 = 6
+
+// Asset 로딩 관리
+let allAssetsReady = false;
+let assetsToLoad = 1 + enemyImgs.length; // player 이미지 1개 + enemy 이미지들
+let loadedAssetCount = 0;
+let coffeeVideoAssetReady = false;
+
+function assetLoaded() {
+  loadedAssetCount++;
+  console.log(`Image asset loaded. ${loadedAssetCount}/${assetsToLoad} images loaded.`);
+  checkAllAssetsReady();
 }
-playerImg.onload = onImageLoad;
-enemyImgs.forEach(img => img.onload = onImageLoad);
+
+function coffeeVideoReady() {
+  if (!coffeeVideoAssetReady) {
+    coffeeVideoAssetReady = true;
+    console.log("Coffee steam video is ready (oncanplaythrough).");
+    checkAllAssetsReady();
+  }
+}
+
+function coffeeVideoError() {
+  if (!coffeeVideoAssetReady) {
+    console.error("Coffee steam video could not be loaded. Steam effect will be disabled.");
+    coffeeVideoAssetReady = true; // 에러 발생 시에도 준비된 것으로 간주 (김 효과 없이 게임 진행)
+    checkAllAssetsReady();
+  }
+}
+
+function checkAllAssetsReady() {
+  if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady) {
+    allAssetsReady = true;
+    console.log("All game assets (images and video) are ready.");
+  }
+}
+
+playerImg.onload = assetLoaded;
+playerImg.onerror = () => { console.error("Failed to load player image."); assetLoaded(); };
+
+enemyImgs.forEach(img => {
+  img.onload = assetLoaded;
+  img.onerror = () => { console.error(`Failed to load enemy image: ${img.src}`); assetLoaded(); };
+});
+
+if (coffeeSteamVideo) {
+  console.log("coffeeSteamVideo element found. Setting up event listeners.");
+  coffeeSteamVideo.oncanplaythrough = coffeeVideoReady;
+  coffeeSteamVideo.onerror = coffeeVideoError;
+
+  if (coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA) {
+    console.log("Coffee steam video was already in readyState >= HAVE_ENOUGH_DATA.");
+    coffeeVideoReady();
+  } else if (coffeeSteamVideo.error) {
+    console.error("Coffee steam video had an error state on initial check.");
+    coffeeVideoError();
+  }
+  coffeeSteamVideo.onloadeddata = () => console.log("Coffee steam video: loadeddata event fired.");
+  coffeeSteamVideo.onwaiting = () => console.log("Coffee steam video: waiting for data...");
+  coffeeSteamVideo.onplaying = () => console.log("Coffee steam video: playing event fired.");
+
+
+} else {
+  console.warn("coffeeSteamVideo element not found in HTML. Assuming ready without steam effect.");
+  coffeeVideoAssetReady = true;
+  checkAllAssetsReady();
+}
+
 
 const PLAYER_SIZE = 50;
 const ENEMY_SIZE = 40;
@@ -139,7 +198,6 @@ let playButtonRect = null;
 let showTranslation = false;
 let isActionLocked = false;
 
-// ===== 색상 분류 함수들 =====
 const MODAL_AUX = [
   "can","can't","cannot","could","couldn't","will","would","shall","should",
   "may","might","must","won't","wouldn't","shan't","shouldn't","mayn't","mightn't","mustn't"
@@ -182,7 +240,6 @@ function isQuestion(sentence) {
   return sentence.trim().endsWith('?');
 }
 
-// ===== 중앙 문장 렌더링 =====
 function drawCenterSentence() {
   if (!centerSentence) return;
 
@@ -259,7 +316,7 @@ function drawCenterSentence() {
 
   if (showTranslation) {
     ctx.save();
-    ctx.font = "18.9px Arial"; // 21px에서 10% 줄임
+    ctx.font = "18.9px Arial";
     ctx.textAlign = "center";
     ctx.fillStyle = "#FFD600";
     ctx.shadowColor = "#111";
@@ -482,16 +539,69 @@ function update(delta) {
     isActionLocked = false;
   }
 }
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
-    // enemy2.png (index 1)만 30% 크게
-    if (e.imgIndex === 1) {
-      const w = ENEMY_SIZE * 1.3;
-      const h = ENEMY_SIZE * 1.3;
-      ctx.drawImage(e.img, e.x - (w - ENEMY_SIZE) / 2, e.y - (h - ENEMY_SIZE) / 2, w, h);
+    if (e.imgIndex === 1) { // enemy2.png (커피잔)
+      const scaleFactor = 1.3;
+      const enlargedWidth = ENEMY_SIZE * scaleFactor;
+      const enlargedHeight = ENEMY_SIZE * scaleFactor;
+      const enlargedX = e.x - (enlargedWidth - ENEMY_SIZE) / 2;
+      const enlargedY = e.y - (enlargedHeight - ENEMY_SIZE) / 2;
+
+      ctx.drawImage(e.img, enlargedX, enlargedY, enlargedWidth, enlargedHeight);
+
+      if (coffeeSteamVideo && coffeeVideoAssetReady &&
+          coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA) {
+
+        const videoAspectRatio = (coffeeSteamVideo.videoWidth > 0 && coffeeSteamVideo.videoHeight > 0)
+                                 ? coffeeSteamVideo.videoWidth / coffeeSteamVideo.videoHeight
+                                 : 1;
+
+        let steamWidth = enlargedWidth * 0.7;
+        let steamHeight = steamWidth / videoAspectRatio;
+
+        const baseX = enlargedX + (enlargedWidth - steamWidth) / 2;
+        const baseYOffset = steamHeight * 0.65;
+        const additionalYOffset = 30; // Y축 위로 30px 추가 이동
+        const baseY = enlargedY - baseYOffset - additionalYOffset; // 김의 기본 Y 위치 수정
+
+        const steamInstances = [
+          { offsetXRatio: 0,    offsetYRatio: 0,     scale: 1.0, alpha: 0.6 },
+          { offsetXRatio: -0.15, offsetYRatio: -0.1,  scale: 0.9, alpha: 0.45 },
+          { offsetXRatio: 0.15,  offsetYRatio: -0.05, scale: 1.1, alpha: 0.45 }
+        ];
+
+        steamInstances.forEach(instance => {
+          ctx.save();
+
+          const currentSteamWidth = steamWidth * instance.scale;
+          const currentSteamHeight = steamHeight * instance.scale;
+          
+          const offsetX = steamWidth * instance.offsetXRatio;
+          const offsetY = steamHeight * instance.offsetYRatio;
+
+          const steamX = baseX + offsetX - (currentSteamWidth - steamWidth) / 2;
+          const steamY = baseY + offsetY - (currentSteamHeight - steamHeight) / 2; 
+
+          ctx.globalAlpha = instance.alpha;
+
+          ctx.drawImage(
+            coffeeSteamVideo,
+            steamX,
+            steamY,
+            currentSteamWidth,
+            currentSteamHeight
+          );
+          ctx.restore();
+        });
+
+      } else if (e.imgIndex === 1) {
+        // console.log("Coffee steam video not drawn: conditions not met.");
+      }
     } else {
       ctx.drawImage(e.img, e.x, e.y, ENEMY_SIZE, ENEMY_SIZE);
     }
@@ -502,6 +612,7 @@ function draw() {
   drawCenterSentence();
   if (fireworks) drawFireworks();
 }
+
 function gameLoop(time) {
   if (!isGameRunning || isGamePaused) return;
   const delta = time - lastTime;
@@ -510,14 +621,19 @@ function gameLoop(time) {
   draw();
   requestAnimationFrame(gameLoop);
 }
+
 document.getElementById('startBtn').onclick = startGame;
 document.getElementById('pauseBtn').onclick = togglePause;
 document.getElementById('stopBtn').onclick = stopGame;
+
 function startGame() {
-  if (!assetsLoaded) {
-    alert("이미지 로딩 중입니다. 잠시 후 다시 시도하세요.");
+  console.log("startGame called.");
+  if (!allAssetsReady) {
+    alert("이미지 및 비디오 로딩 중입니다. 잠시 후 다시 시도하세요.");
+    console.warn("Start aborted: Assets not ready.");
     return;
   }
+  console.log("Assets are ready, proceeding with game start.");
   isGameRunning = true;
   isGamePaused = false;
   try {
@@ -529,7 +645,25 @@ function startGame() {
   bgmAudio.volume = isMuted ? 0 : 0.05;
   bgmAudio.loop = false;
   bgmAudio.addEventListener('ended', playNextBgm);
-  bgmAudio.play();
+  bgmAudio.play().catch(e => console.error("BGM play error:", e));
+
+  if (coffeeSteamVideo && coffeeVideoAssetReady) {
+    console.log(`Attempting to play coffee steam video. ReadyState: ${coffeeSteamVideo.readyState}, Paused: ${coffeeSteamVideo.paused}, Muted: ${coffeeSteamVideo.muted}, CurrentTime: ${coffeeSteamVideo.currentTime}`);
+    coffeeSteamVideo.currentTime = 0;
+    const playPromise = coffeeSteamVideo.play();
+
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        console.log("Coffee steam video playback HAS STARTED successfully (play() promise resolved).");
+      }).catch(error => {
+        console.error("Error attempting to play coffee steam video (play() promise rejected):", error);
+      });
+    } else {
+      console.warn("coffeeSteamVideo.play() did not return a promise.");
+    }
+  } else {
+    console.warn(`Coffee steam video NOT played. Video Element: ${!!coffeeSteamVideo}, Asset Ready: ${coffeeVideoAssetReady}`);
+  }
 
   bullets = [];
   enemies = [];
@@ -553,21 +687,43 @@ function startGame() {
 
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
+  console.log("Game loop initiated.");
 }
+
 function togglePause() {
   if (!isGameRunning) return;
   isGamePaused = !isGamePaused;
+  console.log(`Game paused: ${isGamePaused}`);
   if (isGamePaused) {
     bgmAudio.pause();
+    if (coffeeSteamVideo && !coffeeSteamVideo.paused) {
+        coffeeSteamVideo.pause();
+        console.log("Coffee steam video paused (game pause).");
+    }
   } else {
-    bgmAudio.play();
+    bgmAudio.play().catch(e => console.error("BGM resume error:", e));
+    if (coffeeSteamVideo && coffeeSteamVideo.paused && coffeeVideoAssetReady) {
+        console.log("Attempting to resume coffee steam video (game resume).");
+        const playPromise = coffeeSteamVideo.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => console.log("Coffee steam video resumed successfully."))
+                       .catch(error => console.error("Error resuming coffee steam video:", error));
+        }
+    }
+    lastTime = performance.now();
     requestAnimationFrame(gameLoop);
   }
 }
+
 function stopGame() {
+  console.log("stopGame called.");
   isGameRunning = false;
   isGamePaused = false;
   bgmAudio.pause();
+  if (coffeeSteamVideo && !coffeeSteamVideo.paused) {
+      coffeeSteamVideo.pause();
+      console.log("Coffee steam video paused (game stop).");
+  }
   window.speechSynthesis.cancel();
 
   bullets = [];
@@ -585,6 +741,7 @@ function stopGame() {
   isActionLocked = false;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  console.log("Game stopped and canvas cleared.");
 }
 
 const expandedMargin = 10;
