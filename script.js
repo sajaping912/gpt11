@@ -181,16 +181,14 @@ let sentenceActive = false;
 
 let showPlayButton = false;
 let playButtonRect = null;
-let showTranslation = false; // For translation BELOW sentence (Play button full sentence)
+let showTranslation = false; // For full sentence translation BELOW sentence
 let isActionLocked = false;
 
-// For word touch interaction
+// For word touch interaction and translation
 let centerSentenceWordRects = [];
-// showTranslationForWordTouch is no longer needed for VISUALS of single word translation
-// activeTouchedWord no longer needs to store Korean translation or its specific position details
-// We still might need to know which word was touched if other non-visual logic depended on it,
-// but for now, it's simplified.
-
+let activeWordTranslation = null; // Stores { word, translation, x, y, w, h, lineIndex, show }
+let wordTranslationTimeoutId = null;
+const WORD_TRANSLATION_DURATION = 3000; // ms
 
 const MODAL_AUX = [
   "can","can't","cannot","could","couldn't","will","would","shall","should",
@@ -235,6 +233,80 @@ function isQuestion(sentence) {
   return sentence.trim().endsWith('?');
 }
 
+async function getWordTranslation(word, targetLang = 'ko') {
+  const cleanedWord = word.replace(/[^a-zA-Z']/g, "").toLowerCase().trim();
+  if (!cleanedWord) return "Error: Invalid word";
+
+  /*
+    IMPORTANT: This is a MOCK translation function for demonstration.
+    To use a real translation service (Google Translate, DeepL, etc.):
+    1. Sign up for the API and get an API key from the service provider.
+    2. Replace the mock logic below with an actual `fetch` call to the translation API.
+       Example (conceptual for Google Translate API - requires proper setup and billing):
+       --------------------------------------------------------------------
+       const apiKey = 'YOUR_GOOGLE_CLOUD_API_KEY'; // Keep API keys secure, do not hardcode directly if deploying
+       const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+       try {
+         const response = await fetch(url, {
+           method: 'POST',
+           body: JSON.stringify({
+             q: cleanedWord,
+             target: targetLang, // e.g., 'ko'
+             format: 'text'
+           }),
+           headers: {
+             'Content-Type': 'application/json'
+           }
+         });
+         if (!response.ok) {
+           const errorData = await response.json();
+           console.error('API Error:', errorData);
+           throw new Error(`API error: ${response.status}`);
+         }
+         const data = await response.json();
+         if (data.data && data.data.translations && data.data.translations.length > 0) {
+           return data.data.translations[0].translatedText;
+         } else {
+           console.warn('No translation found for:', cleanedWord, data);
+           return `[${cleanedWord} 뜻 없음]`;
+         }
+       } catch (error) {
+         console.error('Error fetching translation:', error);
+         return `[${cleanedWord} 번역 실패]`;
+       }
+       --------------------------------------------------------------------
+    3. Be mindful of API usage quotas, costs, and terms of service.
+    4. Handle network errors and API errors gracefully in a production application.
+    The mock logic below provides some basic translations for common words in the sample sentences.
+  */
+
+  // Simulate network delay for mock
+  await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+
+  const mockTranslations = {
+      "when": "언제", "will": "~할 것이다", "you": "너는", "arrive": "도착하다", "at": "~에", "the": "그", "station": "역",
+      "i": "나는", "can’t": "~할 수 없다", "believe": "믿다", "how": "얼마나", "fast": "빨리", "time": "시간", "goes": "가다", "by": "지나가다",
+      "what": "무엇", "are": "~이다", "doing": "하고 있는", "right": "바로", "now": "지금",
+      "could": "~할 수 있을까", "help": "돕다", "me": "나를", "carry": "옮기다", "these": "이것들", "groceries": "식료품", "inside": "안으로",
+      "have": "가지다", "been": "~해오고 있다", "waiting": "기다리는 중", "for": "~를 위해", "since": "~부터", "morning": "아침",
+      "she": "그녀는", "is": "~이다", "reading": "읽고 있는", "a": "하나의", "book": "책",
+      "they": "그들은", "working": "일하는 중", "all": "모든", "day": "하루", "종일": "하루 종일",
+      "let’s": "~하자", "grab": "잡다", "coffee": "커피", "and": "그리고", "talk": "이야기하다", "while": "동안",
+      "do": "하다", "any": "어떤", "plans": "계획들", "this": "이", "evening": "저녁",
+      "it’s": "~이다", "long": "긴", "office": "사무실",
+      "looking": "기대하는", "forward": "앞으로", "to": "~로", "our": "우리의", "trip": "여행", "next": "다음", "month": "달",
+      "can": "~할 수 있다", "recommend": "추천하다", "good": "좋은", "place": "장소", "eat": "먹다"
+  };
+
+  if (mockTranslations[cleanedWord]) {
+    return mockTranslations[cleanedWord];
+  }
+  // For compound words or very specific forms, the simple mock might not have them.
+  // A real API would handle variations better.
+  return `[${cleanedWord} 뜻]`; // Default placeholder if not in mock
+}
+
+
 async function speakWord(word) {
   const cleanWord = word.replace(/[^a-zA-Z']/g, "").trim();
   if (!cleanWord) return;
@@ -243,7 +315,7 @@ async function speakWord(word) {
   if (!voices.length) {
     await new Promise(resolve => {
       window.speechSynthesis.onvoiceschanged = resolve;
-      window.speechSynthesis.getVoices();
+      window.speechSynthesis.getVoices(); // Some browsers require this to populate voices
     });
     voices = window.speechSynthesis.getVoices();
   }
@@ -254,7 +326,7 @@ async function speakWord(word) {
     utter.rate = 0.95;
     utter.pitch = 1.0;
 
-    const voice = await getVoice('en-US', 'female');
+    const voice = await getVoice('en-US', 'female'); // Use consistent voice for words
     if (voice) utter.voice = voice;
 
     utter.onend = resolve;
@@ -263,36 +335,35 @@ async function speakWord(word) {
   });
 }
 
+const englishFont = "23.52px Arial"; // Defined once for consistency
 
 function drawCenterSentence() {
   if (!centerSentence) {
     centerSentenceWordRects = [];
     return;
   }
-  centerSentenceWordRects = [];
+  centerSentenceWordRects = []; // Recalculate on each draw
 
   ctx.save();
   ctx.globalAlpha = centerAlpha;
-  const englishFont = "23.52px Arial";
+  // englishFont is defined globally now
   ctx.font = englishFont;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = "left"; // Words are placed individually
+  ctx.textBaseline = "middle"; // Vertically align text to its middle
 
   let lines = [centerSentence.line1, centerSentence.line2];
-  let lineHeight = 30;
+  let lineHeight = 30; // Based on original text display
   let englishBlockHeight = lines.filter(l => l.trim()).length * lineHeight;
-  let yBaseEnglishFirstLine = canvas.height / 2 - englishBlockHeight / 2 + lineHeight / 2;
+  let yBaseEnglishFirstLine = canvas.height / 2 - englishBlockHeight / 2; // This should be middle of first line
 
-  const translationFont = "18.9px Arial"; // Still used for full sentence translation
+  const translationFont = "18.9px Arial"; // For full sentence translation
 
-  // SPECIFIC WORD KOREAN TRANSLATION DRAWING CODE REMOVED
-
-  // Play Button positioning
+  // Play Button positioning (remains the same)
   const playSize = 36 * 0.49;
   const btnPad = 18 * 0.49;
   const btnH = playSize + btnPad * 2;
   const btnW = playSize + btnPad * 2;
-  const englishBlockCenterY = yBaseEnglishFirstLine + (englishBlockHeight - lineHeight) / 2;
+  const englishBlockCenterY = yBaseEnglishFirstLine + englishBlockHeight / 2 - lineHeight/2 ;//canvas.height / 2;
   const btnY = englishBlockCenterY - btnH / 2;
   const btnX = 10;
   playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
@@ -319,12 +390,13 @@ function drawCenterSentence() {
   }
 
   // Draw English Sentence and store word rects
-  ctx.font = englishFont;
-  ctx.textBaseline = "middle";
+  ctx.font = englishFont; // Ensure it's set before measureText
+  ctx.textBaseline = "middle"; // Crucial for y-coordinate meaning center
   let verbColored = false;
   const currentSentenceFullText = (centerSentence.line1 + " " + centerSentence.line2).trim();
   const isQ = isQuestion(currentSentenceFullText);
-  // let sentenceWordIndexCounter = 0; // Not strictly needed if not translating word-by-word
+  const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]);
+
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
@@ -336,7 +408,9 @@ function drawCenterSentence() {
     let totalWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
 
     let currentX = (canvas.width - totalWidth) / 2;
-    let currentY = yBaseEnglishFirstLine + i * lineHeight;
+    // Adjust currentY to be the middle of the text line
+    let currentY = yBaseEnglishFirstLine + i * lineHeight + lineHeight/2;
+
 
     for (let j = 0; j < words.length; j++) {
       let rawWord = words[j];
@@ -357,17 +431,16 @@ function drawCenterSentence() {
       ctx.fillStyle = color;
       ctx.fillText(rawWord, currentX, currentY);
 
-      const wordWidth = wordMetrics[j].width;
-      const wordHeight = parseFloat(englishFont);
+      const measuredWidth = wordMetrics[j].width;
       centerSentenceWordRects.push({
         word: rawWord,
         x: currentX,
-        y: currentY,
-        w: wordWidth,
-        h: wordHeight,
-        // sentenceWordIndex: sentenceWordIndexCounter++ // No longer needed for word translation
+        y: currentY, // This is the vertical middle of the word
+        w: measuredWidth,
+        h: wordHeight, // Approximate height from font size
+        lineIndex: i // 0 for first line, 1 for second line
       });
-      currentX += wordWidth + spaceWidth;
+      currentX += measuredWidth + spaceWidth;
     }
   }
 
@@ -380,8 +453,8 @@ function drawCenterSentence() {
     ctx.fillStyle = "#FFD600";
     ctx.shadowColor = "#111";
     ctx.shadowBlur = 4;
-    const lastEnglishLineY = yBaseEnglishFirstLine + (lines.filter(l=>l.trim()).length - 1) * lineHeight;
-    const translationTextHeight = parseFloat(translationFont);
+    const lastEnglishLineY = yBaseEnglishFirstLine + (lines.filter(l=>l.trim()).length - 1) * lineHeight + lineHeight/2;
+    const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
     const translationBelowY = lastEnglishLineY + lineHeight/2 + 10 + translationTextHeight / 2;
     ctx.fillText(
       translations[centerSentenceIndex],
@@ -389,6 +462,39 @@ function drawCenterSentence() {
       translationBelowY
     );
     ctx.restore();
+  }
+
+  // Draw active word translation
+  if (activeWordTranslation && activeWordTranslation.show) {
+      ctx.save();
+      const wordTransFontFamily = "'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif";
+      const wordTransFontSize = 16; // px
+      ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
+      ctx.textAlign = "center";
+      // textBaseline will be set based on position
+      ctx.fillStyle = "#98FB98"; // PaleGreen
+      ctx.shadowColor = "rgba(0,0,0,0.6)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+
+      const englishWordMiddleY = activeWordTranslation.y;
+      const englishWordHalfHeight = activeWordTranslation.h / 2;
+      const padding = 6; // Padding between word and its translation
+
+      let tx = activeWordTranslation.x + activeWordTranslation.w / 2; // Center of the English word
+      let ty;
+
+      if (activeWordTranslation.lineIndex === 0) { // Word in the first line, translation above
+          ctx.textBaseline = "bottom"; // Anchor translation by its bottom edge
+          ty = englishWordMiddleY - englishWordHalfHeight - padding;
+      } else { // Word in the second line, translation below
+          ctx.textBaseline = "top"; // Anchor translation by its top edge
+          ty = englishWordMiddleY + englishWordHalfHeight + padding;
+      }
+
+      ctx.fillText(activeWordTranslation.translation, tx, ty);
+      ctx.restore();
   }
   ctx.restore();
 }
@@ -418,6 +524,11 @@ function getClockwiseAngle(index, total) {
   return -Math.PI / 2 + (index * 2 * Math.PI) / total;
 }
 function startFireworks(sentence, fx, fy) {
+  // Clear any word translation when fireworks start
+  if (activeWordTranslation) activeWordTranslation.show = false;
+  if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
+  activeWordTranslation = null;
+
   const [line1, line2] = splitSentence(sentence);
   const lines = [line1, line2];
   let partsArr = [];
@@ -468,7 +579,6 @@ function startFireworks(sentence, fx, fy) {
   sentenceActive = true;
   centerAlpha = 1.0;
   showTranslation = false;
-  // No need to manage showTranslationForWordTouch or activeTouchedWord for word translation visuals
 }
 function updateFireworks() {
   if (!fireworks) return false;
@@ -510,15 +620,22 @@ function updateFireworks() {
       fireworksState.phase = "done";
       const [line1, line2] = splitSentence(nextSentence);
       centerSentence = { line1, line2 };
-      centerSentenceIndex = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
+      centerSentenceIndex = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1); // Index of the sentence NOW being shown
       centerAlpha = 1.0;
       fireworks = null;
       fireworksState = null;
       sentenceActive = false;
       showPlayButton = true;
-      showTranslation = false;
-      // No need to reset word translation specific states here
-      centerSentenceWordRects = [];
+      showTranslation = false; // Hide full sentence translation initially
+      
+      // Clear any word translation from previous sentence/interaction
+      if (activeWordTranslation) activeWordTranslation.show = false; // Visually hide
+      activeWordTranslation = null; // Clear data
+      if (wordTranslationTimeoutId) {
+        clearTimeout(wordTranslationTimeoutId);
+        wordTranslationTimeoutId = null;
+      }
+      centerSentenceWordRects = []; // Reset word rects for the new sentence
 
       setTimeout(() => {
         let idx = centerSentenceIndex;
@@ -545,8 +662,8 @@ async function getVoice(lang = 'en-US', gender = 'female') {
   const filtered = voices.filter(v =>
     v.lang === lang &&
     (gender === 'female'
-      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('samantha')
-      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('daniel'))
+      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('zira')
+      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('david'))
   );
   if (filtered.length) return filtered[0];
   const fallback = voices.filter(v => v.lang === lang);
@@ -559,8 +676,9 @@ async function speakSentence(text, gender = 'female') {
     utter.lang = 'en-US';
     utter.rate = 1.0;
     utter.pitch = gender === 'female' ? 1.08 : 1.0;
-    utter.voice = await getVoice('en-US', gender);
-    if (!utter.voice) console.warn("speakSentence: Voice not set for", text, gender);
+    const voice = await getVoice('en-US', gender);
+    if (voice) utter.voice = voice;
+    else console.warn("speakSentence: Voice not set for", text, gender, "using default.");
     utter.onend = resolve;
     utter.onerror = (event) => { console.error('SpeechSynthesisUtterance.onerror for sentence:', event); resolve(); };
     window.speechSynthesis.speak(utter);
@@ -605,7 +723,7 @@ function update(delta) {
   if (!centerSentence) {
     showPlayButton = false;
     showTranslation = false;
-    // No word translation visual state to reset
+    if (activeWordTranslation) activeWordTranslation.show = false;
     isActionLocked = false;
     centerSentenceWordRects = [];
   }
@@ -616,7 +734,7 @@ function draw() {
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
-    if (e.imgIndex === 1) {
+    if (e.imgIndex === 1) { // Coffee cup enemy
       const scaleFactor = 1.3;
       const enlargedWidth = ENEMY_SIZE * scaleFactor;
       const enlargedHeight = ENEMY_SIZE * scaleFactor;
@@ -673,6 +791,26 @@ document.getElementById('startBtn').onclick = startGame;
 document.getElementById('pauseBtn').onclick = togglePause;
 document.getElementById('stopBtn').onclick = stopGame;
 
+function resetGameStateForStartStop() {
+    bullets = []; enemies = []; enemyBullets = [];
+    fireworks = null; fireworksState = null;
+    centerSentence = null; centerSentenceIndex = null;
+    sentenceActive = false; centerAlpha = 1.0;
+    showPlayButton = false; playButtonRect = null;
+    showTranslation = false; // For full sentence translation
+    
+    // Clear word translation state
+    if (activeWordTranslation) activeWordTranslation.show = false;
+    activeWordTranslation = null;
+    if (wordTranslationTimeoutId) {
+        clearTimeout(wordTranslationTimeoutId);
+        wordTranslationTimeoutId = null;
+    }
+    centerSentenceWordRects = [];
+    isActionLocked = false;
+}
+
+
 function startGame() {
   if (!allAssetsReady) {
     alert("이미지 및 비디오 로딩 중입니다. 잠시 후 다시 시도하세요.");
@@ -684,32 +822,24 @@ function startGame() {
     bgmAudio.pause();
     bgmAudio.currentTime = 0;
   } catch (e) {}
-  bgmIndex = 0;
+  bgmIndex = 0; // Reset BGM to first track
   bgmAudio = new Audio(bgmFiles[bgmIndex]);
   bgmAudio.volume = isMuted ? 0 : 0.05;
   bgmAudio.loop = false;
   bgmAudio.addEventListener('ended', playNextBgm);
-  bgmAudio.play().catch(e => console.error("BGM play error:", e));
+  bgmAudio.play().catch(e => console.error("BGM play error on start:", e));
 
   if (coffeeSteamVideo && coffeeVideoAssetReady) {
     coffeeSteamVideo.currentTime = 0;
     const playPromise = coffeeSteamVideo.play();
     if (playPromise !== undefined) {
       playPromise.then(() => {}).catch(error => {
-        console.error("Error attempting to play coffee steam video:", error);
+        console.error("Error attempting to play coffee steam video on start:", error);
       });
     }
   }
 
-  bullets = []; enemies = []; enemyBullets = [];
-  fireworks = null; fireworksState = null;
-  centerSentence = null; centerSentenceIndex = null;
-  sentenceActive = false; centerAlpha = 1.0;
-  showPlayButton = false; playButtonRect = null;
-  showTranslation = false;
-  // No word translation visual state to reset
-  centerSentenceWordRects = [];
-  isActionLocked = false;
+  resetGameStateForStartStop();
 
   spawnEnemy(); spawnEnemy();
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
@@ -724,7 +854,10 @@ function togglePause() {
   if (isGamePaused) {
     bgmAudio.pause();
     if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // Stop any ongoing speech
+    // Optionally hide word translation on pause, or let it persist
+    // if (activeWordTranslation) activeWordTranslation.show = false; 
+    // if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
   } else {
     bgmAudio.play().catch(e => console.error("BGM resume error:", e));
     if (coffeeSteamVideo && coffeeSteamVideo.paused && coffeeVideoAssetReady) {
@@ -733,7 +866,7 @@ function togglePause() {
             playPromise.then(() => {}).catch(error => console.error("Error resuming coffee steam video:", error));
         }
     }
-    lastTime = performance.now();
+    lastTime = performance.now(); // Reset time for smooth animation
     requestAnimationFrame(gameLoop);
   }
 }
@@ -744,25 +877,17 @@ function stopGame() {
   if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
   window.speechSynthesis.cancel();
 
-  bullets = []; enemies = []; enemyBullets = [];
-  fireworks = null; fireworksState = null;
-  centerSentence = null; centerSentenceIndex = null;
-  centerAlpha = 0; sentenceActive = false;
-  showPlayButton = false; playButtonRect = null;
-  showTranslation = false;
-  // No word translation visual state to reset
-  centerSentenceWordRects = [];
-  isActionLocked = false;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  resetGameStateForStartStop();
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
 }
 
-const expandedMargin = 10;
+const expandedMargin = 10; // For easier touch on buttons
 
 function handleCanvasInteraction(clientX, clientY, event) {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked) return;
 
-  // 1. Check Play Button
+  // 1. Check Play Button for full sentence
   const isPlayBtnTouched = showPlayButton && playButtonRect &&
     clientX >= (playButtonRect.x - expandedMargin) &&
     clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
@@ -770,52 +895,94 @@ function handleCanvasInteraction(clientX, clientY, event) {
     clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
 
   if (isPlayBtnTouched) {
-    showTranslation = true; // Full sentence translation BELOW
-    // No single word translation to hide or manage
+    showTranslation = true; // Show full sentence Korean translation
+    
+    // Hide any active word translation
+    if (activeWordTranslation) activeWordTranslation.show = false;
+    if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
+    activeWordTranslation = null;
+    
     isActionLocked = true;
     let idx = centerSentenceIndex !== null ? centerSentenceIndex : (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // Cancel any ongoing speech (e.g., word)
     speakSentence(sentences[idx], 'female').then(() => {
       setTimeout(() => {
         speakSentence(sentences[idx], 'male');
       }, 800);
     });
     event.preventDefault();
-    setTimeout(() => { isActionLocked = false; }, 200);
+    setTimeout(() => { isActionLocked = false; }, 200); // Short lock
     return;
   }
 
-  // 2. Check Word Touch (Only for speaking the word)
+  // 2. Check Word Touch for individual word speech and translation
   if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
     for (const wordRect of centerSentenceWordRects) {
+      // Check if touch is within the word's bounding box (y is middle, h is full height)
       if (
         clientX >= wordRect.x && clientX <= wordRect.x + wordRect.w &&
         clientY >= wordRect.y - wordRect.h / 2 && clientY <= wordRect.y + wordRect.h / 2
       ) {
-        window.speechSynthesis.cancel();
-        speakWord(wordRect.word);
+        window.speechSynthesis.cancel(); // Stop any other TTS
+        speakWord(wordRect.word); // Speak the English word
 
-        // Korean translation logic REMOVED
-        // showTranslationForWordTouch = false; // No longer used for visuals
-        // activeTouchedWord related to Korean translation REMOVED
+        // Clear previous word translation timeout and visual
+        if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
+        if (activeWordTranslation) activeWordTranslation.show = false; // Hide previous immediately
+        activeWordTranslation = null; 
+
+        // Get and display Korean translation for the touched word
+        getWordTranslation(wordRect.word).then(translation => {
+            activeWordTranslation = {
+                word: wordRect.word, // Original English word
+                translation: translation, // Fetched Korean translation
+                x: wordRect.x,    // Position and size of English word
+                y: wordRect.y,
+                w: wordRect.w,
+                h: wordRect.h,
+                lineIndex: wordRect.lineIndex, // 0 for top line, 1 for bottom
+                show: true // Flag to display it
+            };
+            // Set a timer to hide this word's translation
+            wordTranslationTimeoutId = setTimeout(() => {
+                // Only hide if it's still the currently active translation
+                if (activeWordTranslation && activeWordTranslation.word === wordRect.word) { 
+                    activeWordTranslation.show = false;
+                }
+            }, WORD_TRANSLATION_DURATION);
+        }).catch(err => {
+            console.error("Error getting word translation:", err);
+            // Optionally, display a brief error message to the user on canvas
+        });
+        
+        showTranslation = false; // Hide full sentence translation if it was shown
 
         isActionLocked = true;
         event.preventDefault();
-        setTimeout(() => { isActionLocked = false; }, 200);
-        return;
+        setTimeout(() => { isActionLocked = false; }, 200); // Short lock
+        return; // Word processed, no further action
       }
     }
   }
 
-  // 3. Player Movement and Shooting
-  if (!(showPlayButton && playButtonRect && clientX >= playButtonRect.x && clientX <= playButtonRect.x + playButtonRect.w && clientY >= playButtonRect.y && clientY <= playButtonRect.y + playButtonRect.h)) {
-      player.x = clientX - player.w / 2;
-      player.y = clientY - player.h / 2;
-      player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-      player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
-      bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 });
-      sounds.shoot.play();
+  // 3. Player Movement and Shooting (if no UI element above was hit)
+  // Hide any active word translation if user clicks/touches to move/shoot
+  if (activeWordTranslation && activeWordTranslation.show) {
+    activeWordTranslation.show = false;
+    if (wordTranslationTimeoutId) {
+        clearTimeout(wordTranslationTimeoutId);
+        wordTranslationTimeoutId = null;
+    }
   }
+  showTranslation = false; // Also hide full sentence translation
+
+  player.x = clientX - player.w / 2;
+  player.y = clientY - player.h / 2;
+  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+  bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 });
+  sounds.shoot.play();
+  
   event.preventDefault();
 }
 
@@ -832,15 +999,19 @@ canvas.addEventListener('mousedown', e => {
 
 canvas.addEventListener('touchmove', e => {
   if (!isGameRunning || isGamePaused) return;
-  if (isActionLocked) return;
+  if (isActionLocked) return; // Don't move player if an action is locked (e.g. TTS)
+  
   const touch = e.touches[0];
 
+  // Check if move is over play button or words - if so, don't move player, let touchstart handle it if finger lifts.
+  // This prevents player movement when intending to interact with static UI elements via drag-then-lift.
   if (showPlayButton && playButtonRect &&
       touch.clientX >= (playButtonRect.x - expandedMargin) &&
       touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
       touch.clientY >= (playButtonRect.y - expandedMargin) &&
       touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
-    e.preventDefault(); return;
+    // e.preventDefault(); // Still prevent default scroll/zoom
+    return; // Finger is over the play button
   }
 
   if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
@@ -849,11 +1020,13 @@ canvas.addEventListener('touchmove', e => {
         touch.clientX >= wordRect.x && touch.clientX <= wordRect.x + wordRect.w &&
         touch.clientY >= wordRect.y - wordRect.h/2 && touch.clientY <= wordRect.y + wordRect.h/2
       ) {
-        e.preventDefault(); return;
+        // e.preventDefault();
+        return; // Finger is over a word
       }
     }
   }
 
+  // If dragging started outside interactive elements, or moved away from them, update player
   player.x = touch.clientX - player.w / 2;
   player.y = touch.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
@@ -863,27 +1036,32 @@ canvas.addEventListener('touchmove', e => {
 
 canvas.addEventListener('mousemove', e => {
   if (!isGameRunning || isGamePaused) return;
-  if (isActionLocked) return;
+  // For mouse, action lock isn't as critical for movement, but good for consistency
+  if (isActionLocked && (e.buttons !== 1) ) return; // Allow move if mouse button isn't pressed during lock
 
-  if (showPlayButton && playButtonRect &&
-      e.clientX >= (playButtonRect.x - expandedMargin) &&
-      e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-      e.clientY >= (playButtonRect.y - expandedMargin) &&
-      e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
-    return;
-  }
+  // Check if mouse is hovering over interactive elements; if so, don't move player
+  // (unless mouse button is pressed, which would be handled by mousedown/handleCanvasInteraction for shooting)
+  if (e.buttons !== 1) { // Only prevent player move on hover if not dragging/shooting
+    if (showPlayButton && playButtonRect &&
+        e.clientX >= (playButtonRect.x - expandedMargin) &&
+        e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+        e.clientY >= (playButtonRect.y - expandedMargin) &&
+        e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
+      return;
+    }
 
-   if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
-    for (const wordRect of centerSentenceWordRects) {
-      if (
-        e.clientX >= wordRect.x && e.clientX <= wordRect.x + wordRect.w &&
-        e.clientY >= wordRect.y - wordRect.h/2 && e.clientY <= wordRect.y + wordRect.h/2
-      ) {
-        return;
+     if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
+      for (const wordRect of centerSentenceWordRects) {
+        if (
+          e.clientX >= wordRect.x && e.clientX <= wordRect.x + wordRect.w &&
+          e.clientY >= wordRect.y - wordRect.h/2 && e.clientY <= wordRect.y + wordRect.h/2
+        ) {
+          return;
+        }
       }
     }
   }
-
+  // If not hovering over UI or if mouse button is pressed (implying drag/shoot intention)
   player.x = e.clientX - player.w / 2;
   player.y = e.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
