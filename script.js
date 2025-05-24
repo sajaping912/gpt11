@@ -5,7 +5,6 @@ const coffeeSteamVideo = document.getElementById('coffeeSteamVideo'); // 김 효
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// --- START: New variable and function for top offset calculation ---
 let topOffset = 0;
 
 function calculateTopOffset() {
@@ -13,21 +12,17 @@ function calculateTopOffset() {
   if (topControlsElement) {
     topOffset = topControlsElement.offsetHeight;
   } else {
-    topOffset = 0; // Default if element not found
+    topOffset = 0;
   }
 }
-// Initial calculation attempt. More reliable calculation in startGame and resize.
 calculateTopOffset();
-// --- END: New variable and function for top offset calculation ---
-
 
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  calculateTopOffset(); // Recalculate offset on resize
+  calculateTopOffset();
 });
 
-// --- START: 새로운 96개 영어 문장 (수정됨) ---
 const sentences = [
   "What will we build with these big boxes?", // 1.txt
   "We will make a spaceship for our trip.", // 2.txt
@@ -126,11 +121,6 @@ const sentences = [
   "How couldn’t we keep our socks from getting wet?", // 95.txt
   "We couldn’t keep them dry without rain boots on." // 96.txt
 ];
-// --- END: 새로운 96개 영어 문장 ---
-
-// --- START: 새로운 96개 한국어 번역 (일부 수정됨) ---
-// 중요: 아래 번역은 실제 번역문으로 교체해야 합니다!
-// sentences 배열의 각 영어 문장에 맞춰 순서대로 한국어 번역을 입력해주세요.
 const translations = [
   "이 큰 상자들로 무엇을 만들 건가요?", // 1.txt 번역 예시
   "우리는 여행을 위한 우주선을 만들 거예요.", // 2.txt 번역 예시
@@ -227,34 +217,20 @@ const translations = [
   "누가 간식 소풍에 우리와 함께하지 못했나요?", // 93.txt 번역 예시
   "그는 감기에 걸려서 우리와 함께하지 못했어요.", // 94.txt 번역 예시
   "양말이 젖지 않게 하려면 어떻게 해야 했을까요?", // 95.txt 번역 예시
-  "장화를 신지 않고는 마른 상태로 유지할 수 없었어요." // 96.txt 번역 예시
+  "장화를 신지 않고는 마른 상태로 유지할 수 없었어요." // 96.txt
 ];
-// --- END: 새로운 96개 한국어 번역 ---
-
 
 let sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0);
+if (sentenceIndex >= sentences.length) sentenceIndex = 0;
 
 const playerImg = new Image();
 playerImg.src = 'images/player.png';
 
 const enemyImgs = [
-  'images/enemy1.png',
-  'images/enemy2.png',
-  'images/enemy3.png',
-  'images/enemy4.png',
-  'images/enemy5.png'
-].map(src => {
-  const img = new Image();
-  img.src = src;
-  return img;
-});
+  'images/enemy1.png', 'images/enemy2.png', 'images/enemy3.png', 'images/enemy4.png', 'images/enemy5.png'
+].map(src => { const img = new Image(); img.src = src; return img; });
 
-const bgmFiles = [
-  'sounds/background.mp3',
-  'sounds/background1.mp3',
-  'sounds/background2.mp3',
-  'sounds/background3.mp3'
-];
+const bgmFiles = ['sounds/background.mp3', 'sounds/background1.mp3', 'sounds/background2.mp3', 'sounds/background3.mp3'];
 let bgmIndex = 0;
 let bgmAudio = new Audio(bgmFiles[bgmIndex]);
 bgmAudio.volume = 0.05;
@@ -262,13 +238,9 @@ bgmAudio.loop = false;
 
 const volumeBtn = document.getElementById('volumeBtn');
 let isMuted = false;
-function updateVolumeIcon() {
-  volumeBtn.textContent = isMuted ? "🔇" : "🔊";
-}
+function updateVolumeIcon() { volumeBtn.textContent = isMuted ? "🔇" : "🔊"; }
 
-// --- START: 문장 오디오 재생을 위한 변수 및 함수 ---
 let currentSentenceAudio = null;
-
 async function playSentenceAudio(index) {
   return new Promise((resolve, reject) => {
     if (currentSentenceAudio) {
@@ -277,38 +249,19 @@ async function playSentenceAudio(index) {
       currentSentenceAudio.onended = null;
       currentSentenceAudio.onerror = null;
     }
-
-    // 오디오 파일 경로는 'sounds/96_audio/1.mp3' 부터 시작하므로 index + 1
     const audioFilePath = `sounds/96_audio/${index + 1}.mp3`;
     currentSentenceAudio = new Audio(audioFilePath);
-    currentSentenceAudio.volume = isMuted ? 0 : 0.8; // 문장 오디오 볼륨 (BGM보다 크게)
-
-    currentSentenceAudio.onended = () => {
-      currentSentenceAudio = null;
-      resolve();
-    };
-    currentSentenceAudio.onerror = (e) => {
-      console.error(`Error playing sentence audio: ${audioFilePath}`, e);
-      currentSentenceAudio = null;
-      reject(e);
-    };
-
-    currentSentenceAudio.play().catch(e => {
-      console.error(`Failed to play ${audioFilePath}`, e);
-      currentSentenceAudio = null;
-      reject(e);
-    });
+    currentSentenceAudio.volume = isMuted ? 0 : 0.8;
+    currentSentenceAudio.onended = () => { currentSentenceAudio = null; resolve(); };
+    currentSentenceAudio.onerror = (e) => { console.error(`Error playing audio: ${audioFilePath}`, e); currentSentenceAudio = null; reject(e); };
+    currentSentenceAudio.play().catch(e => { console.error(`Failed to play ${audioFilePath}`, e); currentSentenceAudio = null; reject(e); });
   });
 }
-// --- END: 문장 오디오 재생을 위한 변수 및 함수 ---
-
 
 volumeBtn.onclick = function () {
   isMuted = !isMuted;
   bgmAudio.volume = isMuted ? 0 : 0.05;
-  if (currentSentenceAudio) { // 문장 오디오 볼륨 조절
-      currentSentenceAudio.volume = isMuted ? 0 : 0.8;
-  }
+  if (currentSentenceAudio) currentSentenceAudio.volume = isMuted ? 0 : 0.8;
   updateVolumeIcon();
 };
 updateVolumeIcon();
@@ -332,70 +285,27 @@ sounds.shoot.volume = 0.05;
 sounds.explosion.volume = 0.05;
 
 setInterval(() => {
-  if (bgmAudio && bgmAudio.volume !== (isMuted ? 0 : 0.05)) {
-    bgmAudio.volume = isMuted ? 0 : 0.05;
-  }
-  if (currentSentenceAudio && currentSentenceAudio.volume !== (isMuted ? 0 : 0.8)) { // 문장 오디오 볼륨 주기적 확인
-    currentSentenceAudio.volume = isMuted ? 0 : 0.8;
-  }
+  if (bgmAudio && bgmAudio.volume !== (isMuted ? 0 : 0.05)) bgmAudio.volume = isMuted ? 0 : 0.05;
+  if (currentSentenceAudio && currentSentenceAudio.volume !== (isMuted ? 0 : 0.8)) currentSentenceAudio.volume = isMuted ? 0 : 0.8;
 }, 1000);
 
-
-// Asset 로딩 관리
 let allAssetsReady = false;
-let assetsToLoad = 1 + enemyImgs.length; // player 이미지 1개 + enemy 이미지들
+let assetsToLoad = 1 + enemyImgs.length;
 let loadedAssetCount = 0;
 let coffeeVideoAssetReady = false;
-
-function assetLoaded() {
-  loadedAssetCount++;
-  checkAllAssetsReady();
-}
-
-function coffeeVideoReady() {
-  if (!coffeeVideoAssetReady) {
-    coffeeVideoAssetReady = true;
-    checkAllAssetsReady();
-  }
-}
-
-function coffeeVideoError() {
-  if (!coffeeVideoAssetReady) {
-    console.error("Coffee steam video could not be loaded. Steam effect will be disabled.");
-    coffeeVideoAssetReady = true; // Mark as "ready" (or handled) to not block game start
-    checkAllAssetsReady();
-  }
-}
-
-function checkAllAssetsReady() {
-  if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady) {
-    allAssetsReady = true;
-    console.log("All game assets (images and video) are ready.");
-  }
-}
-
+function assetLoaded() { loadedAssetCount++; checkAllAssetsReady(); }
+function coffeeVideoReady() { if (!coffeeVideoAssetReady) { coffeeVideoAssetReady = true; checkAllAssetsReady(); } }
+function coffeeVideoError() { if (!coffeeVideoAssetReady) { console.error("Coffee video error."); coffeeVideoAssetReady = true; checkAllAssetsReady(); } }
+function checkAllAssetsReady() { if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady) { allAssetsReady = true; console.log("All assets ready."); } }
 playerImg.onload = assetLoaded;
-playerImg.onerror = () => { console.error("Failed to load player image."); assetLoaded(); }; // Count as loaded even on error
-
-enemyImgs.forEach(img => {
-  img.onload = assetLoaded;
-  img.onerror = () => { console.error(`Failed to load enemy image: ${img.src}`); assetLoaded(); }; // Count as loaded even on error
-});
-
+playerImg.onerror = () => { console.error("Player image load error."); assetLoaded(); };
+enemyImgs.forEach(img => { img.onload = assetLoaded; img.onerror = () => { console.error(`Enemy image error: ${img.src}`); assetLoaded(); }; });
 if (coffeeSteamVideo) {
   coffeeSteamVideo.oncanplaythrough = coffeeVideoReady;
-  coffeeSteamVideo.onerror = coffeeVideoError; // Use the new error handler
-  // Check if already ready (e.g., cached)
+  coffeeSteamVideo.onerror = coffeeVideoError;
   if (coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA) coffeeVideoReady();
-  // Check if already errored
   else if (coffeeSteamVideo.error) coffeeVideoError();
-
-} else {
-  console.warn("coffeeSteamVideo element not found in HTML. Assuming ready without steam effect.");
-  coffeeVideoAssetReady = true; // If element doesn't exist, it's "ready" in terms of not blocking
-  checkAllAssetsReady(); // Check immediately
-}
-
+} else { coffeeVideoAssetReady = true; checkAllAssetsReady(); }
 
 const PLAYER_SIZE = 50;
 const ENEMY_SIZE = 40;
@@ -407,99 +317,66 @@ let isGameRunning = false;
 let isGamePaused = false;
 let lastTime = 0;
 
-const burstColors = [
-  '#FF5252', '#FF9800', '#FFD600', '#4CAF50', '#2196F3',
-  '#9C27B0', '#E040FB', '#00BCD4', '#FFEB3B', '#FF69B4'
-];
-
+const burstColors = ['#FF5252', '#FF9800', '#FFD600', '#4CAF50', '#2196F3', '#9C27B0', '#E040FB', '#00BCD4', '#FFEB3B', '#FF69B4'];
 let fireworks = null;
 let fireworksState = null;
-let centerSentence = null;
-let centerSentenceIndex = null; // 현재 중앙에 표시된 문장의 'sentences' 배열 내 인덱스
-let centerAlpha = 1.0;
-let nextSentence = null;
-let sentenceActive = false;
+
+const SentenceDisplayMode = {
+  EMPTY: 'empty',
+  QUESTION_FORMING: 'question_forming',
+  QUESTION_DISPLAYED: 'question_displayed',
+  ANSWER_FORMING: 'answer_forming',
+  BOTH_DISPLAYED: 'both_displayed'
+};
+let currentSentenceDisplayMode = SentenceDisplayMode.EMPTY;
+
+let questionSentence = null;
+let answerSentence = null;
+
+let questionWordRects = [];
+let answerWordRects = [];
 
 let showPlayButton = false;
 let playButtonRect = null;
-let showTranslation = false; // For full sentence translation BELOW sentence
+let showTranslation = false;
 let isActionLocked = false;
 
-// For word touch interaction and translation
-let centerSentenceWordRects = [];
-let activeWordTranslation = null; // Stores { word, translation, x, y, w, h, lineIndex, show }
+let activeWordTranslation = null;
 let wordTranslationTimeoutId = null;
-const WORD_TRANSLATION_DURATION = 3000; // ms
+const WORD_TRANSLATION_DURATION = 3000;
 
-const MODAL_AUX = [
-  "can","can't","cannot","could","couldn't","will","would","shall","should",
-  "may","might","must","won't","wouldn't","shan't","shouldn't","mayn't","mightn't","mustn't"
-];
-const DO_AUX = [
-  "do", "does", "did", "don't", "doesn't", "didn't"
-];
-const notVerbIng = [
-  "morning", "evening", "everything", "anything", "nothing", "something",
-  "building", "ceiling", "meeting", "feeling", "wedding", "clothing"
-];
-
-function isAux(word) {
-  return MODAL_AUX.includes(word.toLowerCase()) || DO_AUX.includes(word.toLowerCase());
-}
-function isWh(word) {
-  const whs = ["what","when","where","who","whom","whose","which","why","how"];
-  return whs.includes(word.toLowerCase());
-}
+const MODAL_AUX = ["can","can't","cannot","could","couldn't","will","would","shall","should","may","might","must","won't","wouldn't","shan't","shouldn't","mayn't","mightn't","mustn't"];
+const DO_AUX = ["do", "does", "did", "don't", "doesn't", "didn't"];
+const notVerbIng = ["morning", "evening", "everything", "anything", "nothing", "something", "building", "ceiling", "meeting", "feeling", "wedding", "clothing"];
+function isAux(word) { return MODAL_AUX.includes(word.toLowerCase()) || DO_AUX.includes(word.toLowerCase()); }
+function isWh(word) { return ["what","when","where","who","whom","whose","which","why","how"].includes(word.toLowerCase()); }
 function isVerb(word) {
-  const verbs = [ // 여기에 새로운 96개 문장에 등장하는 주요 동사들을 추가하면 좋습니다.
-    "build", "make", "come", "wear", "fight", "hide", "bring", "catch", "use", "share", "play", "feel", "clean",
-    "allowed", "join", "break", "crash", "do", "fly", "cry", "got", "lost", "visit", "talk", "help", "stuck", "eat",
-    "go", "melt", "laugh", "can", "see", "fix", "jump", "practiced", "open", "hear", "find", "hiding", "start",
-    "taken", "rolled", "bring back", "carry", "couldn't", "set up", "keep"
-    // 기존 동사 리스트도 유지하거나 필요에 따라 병합
-    // "arrive", "believe", "help", "carry", "enjoy", "spend", "grab", "talk", "order", "look", "recommend", "eat",
-    // "plan", "make", "like", "love", "hate", "go", "read", "play", "work", "find", "get", "enjoyed", "forward", "wait"
-  ];
-   // 간단한 처리를 위해, 주요 동사들을 포함. 더 정확한 파싱은 NLP 라이브러리 필요.
-  const lowerWord = word.toLowerCase().replace(/[^a-z']/g, ''); // 특수문자 제거하고 소문자로
-  return verbs.some(v => lowerWord === v || lowerWord.startsWith(v)); // 동사 원형 또는 시작 부분이 일치하는 경우
+  const verbs = [ "build", "make", "come", "wear", "fight", "hide", "bring", "catch", "use", "share", "play", "feel", "clean", "allowed", "join", "break", "crash", "do", "fly", "cry", "got", "lost", "visit", "talk", "help", "stuck", "eat", "go", "melt", "laugh", "can", "see", "fix", "jump", "practiced", "open", "hear", "find", "hiding", "start", "taken", "rolled", "bring", "carry", "couldn’t", "set", "keep" ];
+  const lowerWord = word.toLowerCase().replace(/[^a-z']/g, '');
+  return verbs.some(v => lowerWord === v || lowerWord.startsWith(v));
 }
 function isVing(word) {
   let lw = word.toLowerCase();
   if (notVerbIng.includes(lw)) return false;
   if (/^[a-zA-Z]+ing$/.test(lw)) {
     let base = lw.slice(0, -3);
-    if (base.endsWith('e') && !base.endsWith('ee') && base !== 'be' && base.length > 1) { // 'be' 같은 단어 제외, 한 글자 동사+e는 흔치 않음
-        if (base.endsWith('i')) { // tying -> tie
-             base = base.slice(0, -1) + 'e';
-        } else { // making -> make
-            // base = base.slice(0, -1); // 이 부분은 isVerb에서 처리하도록 수정
-        }
-    } else if (base.length > 1 && base.charAt(base.length -1) === base.charAt(base.length-2) && !['ss','ll','ff','zz'].includes(base.slice(-2))) { // running -> run, but not miss, call
-        base = base.slice(0,-1);
-    }
+    if (base.endsWith('e') && !base.endsWith('ee') && base !== 'be' && base.length > 1) { if (base.endsWith('i')) { base = base.slice(0, -1) + 'e'; } }
+    else if (base.length > 1 && base.charAt(base.length -1) === base.charAt(base.length-2) && !['ss','ll','ff','zz'].includes(base.slice(-2))) { base = base.slice(0,-1); }
     return isVerb(base) || (base.endsWith('y') && isVerb(base.slice(0, -1) + 'ie'));
   }
   return false;
 }
-function isBeen(word) {
-  return word.toLowerCase() === 'been';
+function isBeen(word) { return word.toLowerCase() === 'been'; }
+function isQuestionSentence(sentenceText) {
+    return sentenceText.trim().endsWith('?');
 }
-function isQuestion(sentence) {
-  return sentence.trim().endsWith('?');
-}
+
 
 async function getWordTranslation(word, targetLang = 'ko') {
   const cleanedWord = word.replace(/[^a-zA-Z']/g, "").toLowerCase().trim();
   if (!cleanedWord) return "Error: Invalid word";
-
-  // Simulate network delay for mock
   await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-
-  // 중요: 이 부분은 실제 번역 API를 사용하거나,
-  // 새로운 96개 문장에 등장하는 주요 단어들의 번역을 미리 정의해두어야 합니다.
-  // 아래는 기존 예시이며, 필요에 따라 확장해야 합니다.
-  const mockTranslations = {
+  const mockTranslations = { /* Your extensive list of mock translations */
       "what": "무엇", "will": "~할 것이다", "we": "우리는", "build": "짓다", "with": "~으로", "these": "이것들", "big": "큰", "boxes": "상자들",
       "make": "만들다", "a": "하나의", "spaceship": "우주선", "for": "~를 위해", "our": "우리의", "trip": "여행",
       "when": "언제", "they": "그들은", "come": "오다", "to": "~로", "the": "그", "backyard": "뒷마당", "party": "파티",
@@ -582,228 +459,39 @@ async function getWordTranslation(word, targetLang = 'ko') {
       "race": "경주",
       "thunder": "천둥", "loud": "시끄러운",
       "set up": "설치하다", "lemonade": "레모네이드", "stand": "가판대",
+      "set": "설치하다", // for "set up"
       "dripping": "물이 떨어지는",
-      "join": "참여하다", "us": "우리",
+      "join": "참여하다",
       "caught": "걸렸다", "cold": "감기",
       "socks": "양말", "getting": "되는 것",
       "dry": "마른", "without": "~없이", "on": "위에"
-      // ... 나머지 단어들도 추가 필요 ...
   };
-
-  if (mockTranslations[cleanedWord]) {
-    return mockTranslations[cleanedWord];
-  }
-  return `[${cleanedWord} 뜻]`; // 기본값
+  if (mockTranslations[cleanedWord]) return mockTranslations[cleanedWord];
+  return `[${cleanedWord} 뜻]`;
 }
-
 
 async function speakWord(word) {
   const cleanWord = word.replace(/[^a-zA-Z']/g, "").trim();
   if (!cleanWord) return;
-
-  // TTS 음성 로딩은 비동기일 수 있으므로, getVoices가 완료될 때까지 기다립니다.
   let voices = window.speechSynthesis.getVoices();
   if (!voices.length) {
     await new Promise(resolve => {
-      window.speechSynthesis.onvoiceschanged = () => {
-        voices = window.speechSynthesis.getVoices();
-        resolve();
-      };
-      window.speechSynthesis.getVoices(); // 일부 브라우저에서는 호출해야 voiceschanged 이벤트 발생
+      window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); resolve(); };
+      window.speechSynthesis.getVoices();
     });
   }
-
   return new Promise(async resolve => {
     const utter = new window.SpeechSynthesisUtterance(cleanWord);
-    utter.lang = 'en-US';
-    utter.rate = 0.95; // 단어 발음 속도
-    utter.pitch = 1.0; // 단어 발음 톤
-
-    const voice = await getVoice('en-US', 'female'); // 단어는 일관된 목소리로 (예: 여성)
+    utter.lang = 'en-US'; utter.rate = 0.95; utter.pitch = 1.0;
+    const voice = await getVoice('en-US', 'female');
     if (voice) utter.voice = voice;
-
     utter.onend = resolve;
-    utter.onerror = (event) => { console.error('SpeechSynthesisUtterance.onerror for word:', event); resolve(); }; // 에러 발생 시에도 resolve
+    utter.onerror = (event) => { console.error('SpeechSynthesis error for word:', event); resolve(); };
     window.speechSynthesis.speak(utter);
   });
 }
 
 const englishFont = "23.52px Arial";
-
-function drawCenterSentence() {
-  if (!centerSentence) {
-    centerSentenceWordRects = [];
-    return;
-  }
-  centerSentenceWordRects = [];
-
-  ctx.save();
-  ctx.globalAlpha = centerAlpha;
-  ctx.font = englishFont;
-  ctx.textAlign = "left"; // Keep left for drawing word by word
-  ctx.textBaseline = "middle";
-
-  const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-
-  let lines = [centerSentence.line1, centerSentence.line2];
-  let lineHeight = 30;
-  let englishBlockHeight = lines.filter(l => l && l.trim()).length * lineHeight;
-
-  let yBaseEnglishFirstLine = mainRenderAreaYCenter - englishBlockHeight / 2;
-
-  const translationFont = "18.9px Arial";
-
-  const playSize = 36 * 0.49;
-  const btnPad = 18 * 0.49;
-  const btnH = playSize + btnPad * 2;
-  const btnW = playSize + btnPad * 2;
-
-  let playButtonCenterY;
-  if (lines.filter(l => l && l.trim()).length > 0) {
-      playButtonCenterY = yBaseEnglishFirstLine + lineHeight / 2;
-  } else {
-      playButtonCenterY = mainRenderAreaYCenter;
-  }
-  const btnY = playButtonCenterY - btnH / 2;
-  const btnX = 10;
-  playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
-
-  if (showPlayButton) {
-    ctx.save();
-    ctx.globalAlpha = 0.82;
-    ctx.fillStyle = "#222";
-    ctx.beginPath();
-    ctx.roundRect(playButtonRect.x, playButtonRect.y, playButtonRect.w, playButtonRect.h, 20 * 0.49);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = "#4CAF50";
-    ctx.lineWidth = 3 * 0.49;
-    ctx.stroke();
-    ctx.fillStyle = "#4CAF50";
-    ctx.beginPath();
-    ctx.moveTo(playButtonRect.x + btnPad + 6 * 0.49, playButtonRect.y + btnPad);
-    ctx.lineTo(playButtonRect.x + btnPad + 6 * 0.49, playButtonRect.y + playButtonRect.h - btnPad);
-    ctx.lineTo(playButtonRect.x + btnPad + playSize, playButtonRect.y + playButtonRect.h / 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  ctx.font = englishFont;
-  ctx.textBaseline = "middle";
-  let verbColored = false;
-  const currentSentenceFullText = (centerSentence.line1 + " " + centerSentence.line2).trim();
-  const isQ = isQuestion(currentSentenceFullText);
-  const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]);
-
-  // --- START: Removed sentenceStartXOffset calculation for centering ---
-  // const gapAfterPlayButton = 10; // No longer needed here for sentence centering
-  // const sentenceStartXOffset = playButtonRect.x + playButtonRect.w + gapAfterPlayButton; // No longer needed here for sentence centering
-  // --- END: Removed sentenceStartXOffset calculation for centering ---
-
-  for (let i = 0; i < lines.length; i++) {
-    const lineText = lines[i];
-    if (!lineText || !lineText.trim()) continue;
-
-    const words = lineText.split(" ");
-    let wordMetrics = words.map(w => ctx.measureText(w));
-    let spaceWidth = ctx.measureText(" ").width;
-    let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
-
-    // --- MODIFICATION: Center sentence on the entire canvas width ---
-    let currentX = (canvas.width - totalLineWidth) / 2;
-    // --- END MODIFICATION ---
-
-    let currentY = yBaseEnglishFirstLine + i * lineHeight + lineHeight/2;
-
-    for (let j = 0; j < words.length; j++) {
-      let rawWord = words[j];
-      let cleanedWord = rawWord.replace(/[^a-zA-Z']/g, "");
-      let lowerCleanedWord = cleanedWord.toLowerCase();
-      let color = "#fff";
-
-      if (isQ && i === 0 && j === 0 && (isAux(lowerCleanedWord) || isWh(lowerCleanedWord))) {
-        color = "#40b8ff";
-      } else if (isVerb(lowerCleanedWord) && !verbColored) {
-        color = "#FFD600";
-        verbColored = true;
-      } else if (isAux(lowerCleanedWord) || isBeen(lowerCleanedWord)) {
-        color = "#40b8ff";
-      } else if (isVing(lowerCleanedWord)) {
-        color = "#40b8ff";
-      }
-      ctx.fillStyle = color;
-      ctx.fillText(rawWord, currentX, currentY);
-
-      const measuredWidth = wordMetrics[j].width;
-      centerSentenceWordRects.push({
-        word: rawWord,
-        x: currentX,
-        y: currentY,
-        w: measuredWidth,
-        h: wordHeight,
-        lineIndex: i
-      });
-      currentX += measuredWidth + spaceWidth;
-    }
-  }
-
-  if (showTranslation && centerSentenceIndex !== null && translations[centerSentenceIndex]) {
-    ctx.save();
-    ctx.font = translationFont;
-    ctx.textAlign = "center"; // Translation is centered
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#FFD600";
-    ctx.shadowColor = "#111";
-    ctx.shadowBlur = 4;
-    const lastEnglishLineY = yBaseEnglishFirstLine + (lines.filter(l=>l && l.trim()).length - 1) * lineHeight + lineHeight/2;
-    const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
-    const translationBelowY = lastEnglishLineY + lineHeight/2 + 10 + translationTextHeight / 2;
-
-    // --- MODIFICATION: Center translation text on the entire canvas width ---
-    const englishBlockCenterX = canvas.width / 2;
-    // --- END MODIFICATION ---
-
-    ctx.fillText(
-      translations[centerSentenceIndex],
-      englishBlockCenterX,
-      translationBelowY
-    );
-    ctx.restore();
-  }
-
-  if (activeWordTranslation && activeWordTranslation.show) {
-      ctx.save();
-      const wordTransFontFamily = "'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif";
-      const wordTransFontSize = 16;
-      ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#98FB98";
-      ctx.shadowColor = "rgba(0,0,0,0.6)";
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-
-      const englishWordMiddleY = activeWordTranslation.y;
-      const englishWordHalfHeight = activeWordTranslation.h / 2;
-      const padding = 6;
-
-      let tx = activeWordTranslation.x + activeWordTranslation.w / 2;
-      let ty;
-
-      if (activeWordTranslation.lineIndex === 0) {
-          ctx.textBaseline = "bottom";
-          ty = englishWordMiddleY - englishWordHalfHeight - padding;
-      } else {
-          ctx.textBaseline = "top";
-          ty = englishWordMiddleY + englishWordHalfHeight + padding;
-      }
-      ctx.fillText(activeWordTranslation.translation, tx, ty);
-      ctx.restore();
-  }
-  ctx.restore();
-}
-
 
 function drawFireworks() {
   if (!fireworks) return;
@@ -821,211 +509,193 @@ function drawFireworks() {
 
 function splitSentence(sentence) {
   const words = sentence.split(" ");
+  if (words.length <= 1) return [sentence, ""];
   const half = Math.ceil(words.length / 2);
-  const line1 = words.slice(0, half).join(" ");
-  const line2 = words.slice(half).join(" ");
-  return [line1, line2];
+  return [words.slice(0, half).join(" "), words.slice(half).join(" ")];
 }
 
-function getClockwiseAngle(index, total) {
-  return -Math.PI / 2 + (index * 2 * Math.PI) / total;
+function getSentenceHeight(sentenceText) {
+    if (!sentenceText) return 0;
+    const [line1, line2] = splitSentence(sentenceText);
+    const linesArr = [line1, line2].filter(l => l && l.trim().length > 0);
+    return linesArr.length * 30; // Assuming 30px per line
 }
 
-function startFireworks(sentence, fx, fy) {
+
+function getClockwiseAngle(index, total) { return -Math.PI / 2 + (index * 2 * Math.PI) / total; }
+
+function startFireworks(sentenceText, fx, fy, isQuestion, originalSentenceIndex) {
   if (activeWordTranslation) activeWordTranslation.show = false;
   if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
   activeWordTranslation = null;
 
-  const [line1, line2] = splitSentence(sentence);
-  const linesArr = [line1, line2]; // Renamed to avoid conflict
+  const [line1, line2] = splitSentence(sentenceText);
+  const linesArr = [line1, line2].filter(l => l && l.trim().length > 0);
   let partsArr = [];
-  let totalActiveLinesInSentence = linesArr.filter(line => line && line.trim().length > 0).length; // Renamed
   linesArr.forEach((line, i) => {
-    if (!line || !line.trim()) return;
-    const parts = line.split(" ");
-    partsArr = partsArr.concat(parts.map(word => ({ word, row: i })));
+    partsArr = partsArr.concat(line.split(" ").map(word => ({ word, row: i })));
   });
 
   const baseRadius = 51.2 * 0.88;
   const maxRadius = 120.96 * 0.88;
-
   let centerX = fx;
   const margin = 8;
   if (centerX - maxRadius < margin) centerX = margin + maxRadius;
   if (centerX + maxRadius > canvas.width - margin) centerX = canvas.width - margin - maxRadius;
 
-  const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-
   fireworks = [];
   fireworksState = {
     t: 0,
     phase: "explode",
-    holdDuration: 60,
-    explodeDuration: 180,
-    gatherDuration: 45,
+    holdDuration: 40, 
+    explodeDuration: 150, 
+    gatherDuration: 40, 
     originX: centerX,
-    originY: fy
+    originY: fy,
+    formingSentenceText: sentenceText,
+    formingSentenceIsQuestion: isQuestion,
+    formingSentenceOriginalIndex: originalSentenceIndex,
+    targetCenterY: 0
   };
 
   const N = partsArr.length;
   for (let j = 0; j < N; j++) {
     const angle = getClockwiseAngle(j, N);
-    const color = burstColors[j % burstColors.length];
     fireworks.push({
       text: partsArr[j].word,
       angle: angle,
       row: partsArr[j].row,
-      x: centerX,
-      y: fy,
-      radius: baseRadius,
-      maxRadius: maxRadius,
-      color: color,
-      arrived: false,
-      targetX: canvas.width / 2,
-      targetY: mainRenderAreaYCenter + (partsArr[j].row - (totalActiveLinesInSentence - 1) / 2) * 30
+      x: centerX, y: fy,
+      radius: baseRadius, maxRadius: maxRadius,
+      color: burstColors[j % burstColors.length],
+      arrived: false, targetX: 0, targetY: 0
     });
   }
-  sentenceActive = true;
-  centerAlpha = 1.0;
-  showTranslation = false;
 }
 
+const QUESTION_Y_ADJUST = 15; // New constant: px to move question down
+const ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET = 100; // New constant: px answer is below question center
+
 function updateFireworks() {
-  if (!fireworks) return false;
+  if (!fireworks) return;
 
   fireworksState.t++;
   const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
+  // const verticalGapBetweenQACenters = 150; // This is no longer used directly for positioning
 
   if (fireworksState.phase === "explode") {
     const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1);
     const ease = 1 - Math.pow(1 - progress, 2);
-    const baseRadius = 51.2 * 0.88;
-    const maxRadius = 120.96 * 0.88;
-    const radius = baseRadius + (maxRadius - baseRadius) * ease;
+    const currentRadiusBase = fireworks.length > 0 ? fireworks[0].radius : (51.2 * 0.88);
+    const currentMaxRadius = fireworks.length > 0 ? fireworks[0].maxRadius : (120.96 * 0.88);
+    const radius = currentRadiusBase + (currentMaxRadius - currentRadiusBase) * ease;
 
     fireworks.forEach((fw) => {
       fw.radius = radius;
       fw.x = fireworksState.originX + Math.cos(fw.angle) * radius;
       fw.y = fireworksState.originY + Math.sin(fw.angle) * radius;
     });
-
-    if (progress >= 1) {
-      fireworksState.phase = "hold";
-      fireworksState.t = 0;
-    }
+    if (progress >= 1) { fireworksState.phase = "hold"; fireworksState.t = 0; }
   } else if (fireworksState.phase === "hold") {
-    if (fireworksState.t >= fireworksState.holdDuration) {
-      fireworksState.phase = "gather";
-      fireworksState.t = 0;
-      centerAlpha = 0;
-    }
+    if (fireworksState.t >= fireworksState.holdDuration) { fireworksState.phase = "gather"; fireworksState.t = 0; }
   } else if (fireworksState.phase === "gather") {
     const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1);
-    const ease = Math.pow(progress, 2);
-
-    const tempCtx = canvas.getContext('2d');
+    const ease = Math.pow(progress, 2); 
+    const fastEase = Math.pow(progress, 0.8); 
+    const tempCtx = ctx;
     tempCtx.font = englishFont;
 
-    // Play button related constants are not needed for sentence X centering
-    // const playSizeGather = 36 * 0.49;
-    // const btnPadGather = 18 * 0.49;
-    // const btnWGather = playSizeGather + btnPadGather * 2;
-    // const btnXGather = 10;
-    // --- START: Removed sentenceStartXOffsetGather calculation for centering ---
-    // const gapAfterPlayButtonGather = 10;
-    // const sentenceStartXOffsetGather = btnXGather + btnWGather + gapAfterPlayButtonGather;
-    // --- END: Removed sentenceStartXOffsetGather calculation for centering ---
+    const [line1Gather, line2Gather] = splitSentence(fireworksState.formingSentenceText);
+    const gatherLines = [line1Gather, line2Gather].filter(l => l && l.trim().length > 0);
+    let lineWordArrays = gatherLines.map(line => line.split(" "));
+    
+    const formingSentenceHeight = getSentenceHeight(fireworksState.formingSentenceText);
 
-    const [line1Gather, line2Gather] = splitSentence(nextSentence);
-    const gatherLines = [line1Gather, line2Gather];
-    let lineWordArrays = [];
-    gatherLines.forEach(line => {
-        if (line && line.trim()) lineWordArrays.push(line.split(" "));
-    });
+    if (fireworksState.formingSentenceIsQuestion) {
+        let baseQTargetY;
+        const nextSentencePotentialIndex = fireworksState.formingSentenceOriginalIndex + 1;
+        if (nextSentencePotentialIndex < sentences.length && sentences[nextSentencePotentialIndex]) {
+            const expectedAnswerHeight = getSentenceHeight(sentences[nextSentencePotentialIndex]);
+            baseQTargetY = mainRenderAreaYCenter - ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET / 2 - expectedAnswerHeight / 4 + formingSentenceHeight / 4;
+        } else { // Question will be alone
+             baseQTargetY = mainRenderAreaYCenter;
+        }
+        fireworksState.targetCenterY = baseQTargetY + QUESTION_Y_ADJUST;
+
+    } else { // Forming an ANSWER
+        let actualQuestionCenterY;
+        if (questionSentence) { // Question is already on screen
+            const qHeight = getSentenceHeight(questionSentence.line1 + " " + (questionSentence.line2 || ""));
+            // Calculate where the question *should be* if Q/A pair
+            actualQuestionCenterY = mainRenderAreaYCenter - ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET / 2 - formingSentenceHeight / 4 + qHeight / 4 + QUESTION_Y_ADJUST;
+        } else { // Fallback if questionSentence somehow not set (should not happen)
+             // This case is problematic as we need a reference Q. Assuming Q was just above center.
+            actualQuestionCenterY = mainRenderAreaYCenter + QUESTION_Y_ADJUST; 
+        }
+        fireworksState.targetCenterY = actualQuestionCenterY + ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET;
+    }
 
     let wordIndexInSentence = 0;
     for (let i = 0; i < lineWordArrays.length; i++) {
-        const wordsInLine = lineWordArrays[i];
-        let wordMetrics = wordsInLine.map(w => tempCtx.measureText(w));
-        let spaceWidth = tempCtx.measureText(" ").width;
-        let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (wordsInLine.length - 1);
+      const wordsInLine = lineWordArrays[i];
+      let wordMetrics = wordsInLine.map(w => tempCtx.measureText(w));
+      let spaceWidth = tempCtx.measureText(" ").width;
+      let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (wordsInLine.length - 1);
+      let currentXTargetForLine = (canvas.width - totalLineWidth) / 2;
+      let currentYTargetForLine = fireworksState.targetCenterY + (i - (lineWordArrays.length - 1) / 2) * 30;
 
-        // --- MODIFICATION: Center target X on the entire canvas width ---
-        let currentXTargetForLine = (canvas.width - totalLineWidth) / 2;
-        // --- END MODIFICATION ---
-
-        let currentYTarget = mainRenderAreaYCenter + (i - (lineWordArrays.length -1) / 2) * 30;
-
-        for (let j = 0; j < wordsInLine.length; j++) {
-            if (fireworks[wordIndexInSentence]) {
-                fireworks[wordIndexInSentence].targetX = currentXTargetForLine + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width, 0) + spaceWidth * j;
-                fireworks[wordIndexInSentence].targetY = currentYTarget;
-            }
-            wordIndexInSentence++;
+      for (let j = 0; j < wordsInLine.length; j++) {
+        if (fireworks[wordIndexInSentence]) {
+          fireworks[wordIndexInSentence].targetX = currentXTargetForLine + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width, 0) + spaceWidth * j;
+          fireworks[wordIndexInSentence].targetY = currentYTargetForLine;
         }
+        wordIndexInSentence++;
+      }
     }
 
     fireworks.forEach((fw) => {
-      const totalActiveLinesGather = lineWordArrays.length;
-      fw.targetY = mainRenderAreaYCenter + (fw.row - (totalActiveLinesGather - 1) / 2) * 30;
-
-      fw.x += (fw.targetX - fw.x) * ease * 0.2;
-      fw.y += (fw.targetY - fw.y) * ease * 0.2;
+      fw.x += (fw.targetX - fw.x) * ease; 
+      fw.y += (fw.targetY - fw.y) * fastEase; 
     });
 
     if (progress >= 1) {
       fireworksState.phase = "done";
-      const [line1, line2] = splitSentence(nextSentence);
-      centerSentence = { line1, line2 };
-      centerSentenceIndex = (sentenceIndex === 0 ? sentences.length - 1 : sentenceIndex - 1);
-      centerAlpha = 1.0;
-      fireworks = null;
-      fireworksState = null;
-      sentenceActive = false;
-      showPlayButton = true;
-      showTranslation = false;
+      const [line1, line2] = splitSentence(fireworksState.formingSentenceText);
+      const formedSentenceData = { line1, line2, originalIndex: fireworksState.formingSentenceOriginalIndex };
 
+      if (fireworksState.formingSentenceIsQuestion) {
+        questionSentence = formedSentenceData;
+        currentSentenceDisplayMode = SentenceDisplayMode.QUESTION_DISPLAYED;
+        sentenceIndex = fireworksState.formingSentenceOriginalIndex;
+        localStorage.setItem('sentenceIndex', sentenceIndex.toString());
+        showPlayButton = true;
+        playSentenceAudio(questionSentence.originalIndex).catch(err => console.error("Error playing Q audio:", err));
+      } else {
+        answerSentence = formedSentenceData;
+        currentSentenceDisplayMode = SentenceDisplayMode.BOTH_DISPLAYED;
+        playSentenceAudio(answerSentence.originalIndex).catch(err => console.error("Error playing A audio:", err));
+      }
+
+      fireworks = null;
       if (activeWordTranslation) activeWordTranslation.show = false;
       activeWordTranslation = null;
-      if (wordTranslationTimeoutId) {
-        clearTimeout(wordTranslationTimeoutId);
-        wordTranslationTimeoutId = null;
-      }
-      centerSentenceWordRects = [];
-
-      setTimeout(() => {
-        let idxToPlay = centerSentenceIndex;
-        window.speechSynthesis.cancel();
-        playSentenceAudio(idxToPlay)
-            .catch(err => console.error("Error playing sentence audio from fireworks:", err));
-      }, 800);
+      if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
     }
   }
 }
 
+
 async function getVoice(lang = 'en-US', gender = 'female') {
   let voices = window.speechSynthesis.getVoices();
   if (!voices.length) {
-    await new Promise(resolve => {
-      window.speechSynthesis.onvoiceschanged = () => {
-        voices = window.speechSynthesis.getVoices();
-        resolve();
-      };
-      window.speechSynthesis.getVoices();
-    });
+    await new Promise(resolve => { window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); resolve(); }; window.speechSynthesis.getVoices(); });
   }
-  const filtered = voices.filter(v =>
-    v.lang === lang &&
-    (gender === 'female'
-      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google us english')
-      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english'))
-  );
+  const filtered = voices.filter(v => v.lang === lang && (gender === 'female' ? (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google us english')) : (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english'))));
   if (filtered.length) return filtered[0];
   const fallback = voices.filter(v => v.lang === lang);
   if (fallback.length) return fallback[0];
   return voices.find(v => v.default && v.lang.startsWith(lang.split('-')[0])) || voices.find(v => v.default) || voices[0];
 }
-
 
 function spawnEnemy() {
   const idx = Math.floor(Math.random() * enemyImgs.length);
@@ -1038,40 +708,55 @@ function spawnEnemy() {
 
 function update(delta) {
   enemies = enemies.filter(e => e.y <= canvas.height);
-  while (enemies.length < 2) spawnEnemy();
+  while (enemies.length < 2 && enemies.length < 5) spawnEnemy();
   enemies.forEach(e => e.y += 1);
 
   bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; });
-  enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
 
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
       if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
-        if (!fireworks && !sentenceActive) {
-          nextSentence = sentences[sentenceIndex];
-          sentenceIndex = (sentenceIndex + 1) % sentences.length;
-          localStorage.setItem('sentenceIndex', sentenceIndex);
-
-          const fx = e.x + e.w / 2;
-          const fy = e.y + e.h / 2;
-          startFireworks(nextSentence, fx, fy);
-          sounds.explosion.play();
-        }
-        enemies.splice(ei, 1);
         bullets.splice(bi, 1);
+        enemies.splice(ei, 1);
+        sounds.explosion.play();
+
+        if (!fireworks) { 
+            const fx = e.x + e.w / 2;
+            const fy = e.y + e.h / 2;
+
+            if (currentSentenceDisplayMode === SentenceDisplayMode.EMPTY) {
+                if (sentenceIndex >= sentences.length || sentenceIndex % 2 !== 0) sentenceIndex = 0;
+                currentSentenceDisplayMode = SentenceDisplayMode.QUESTION_FORMING;
+                startFireworks(sentences[sentenceIndex], fx, fy, true, sentenceIndex);
+            } else if (currentSentenceDisplayMode === SentenceDisplayMode.QUESTION_DISPLAYED) {
+                if (sentenceIndex + 1 < sentences.length) {
+                    currentSentenceDisplayMode = SentenceDisplayMode.ANSWER_FORMING;
+                    startFireworks(sentences[sentenceIndex + 1], fx, fy, false, sentenceIndex + 1);
+                } else { 
+                    questionSentence = null; questionWordRects = []; showPlayButton = false;
+                    currentSentenceDisplayMode = SentenceDisplayMode.EMPTY;
+                    sentenceIndex = 0; 
+                    localStorage.setItem('sentenceIndex', sentenceIndex.toString());
+                }
+            } else if (currentSentenceDisplayMode === SentenceDisplayMode.BOTH_DISPLAYED) {
+                questionSentence = null; questionWordRects = [];
+                answerSentence = null; answerWordRects = [];
+                showPlayButton = false; showTranslation = false;
+                
+                sentenceIndex = (sentenceIndex + 2);
+                if (sentenceIndex >= sentences.length) sentenceIndex = 0;
+                localStorage.setItem('sentenceIndex', sentenceIndex.toString());
+
+                currentSentenceDisplayMode = SentenceDisplayMode.QUESTION_FORMING;
+                startFireworks(sentences[sentenceIndex], fx, fy, true, sentenceIndex);
+            }
+        }
+        return;
       }
     });
   });
 
   if (fireworks) updateFireworks();
-
-  if (!centerSentence && !fireworks) {
-    showPlayButton = false;
-    showTranslation = false;
-    if (activeWordTranslation) activeWordTranslation.show = false;
-    isActionLocked = false;
-    centerSentenceWordRects = [];
-  }
 }
 
 function draw() {
@@ -1079,7 +764,7 @@ function draw() {
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
-    if (e.imgIndex === 1) {
+    if (e.imgIndex === 1) { 
       const scaleFactor = 1.3;
       const enlargedWidth = ENEMY_SIZE * scaleFactor;
       const enlargedHeight = ENEMY_SIZE * scaleFactor;
@@ -1119,17 +804,217 @@ function draw() {
 
   ctx.fillStyle = 'red';
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-  drawCenterSentence();
-  if (fireworks) drawFireworks();
+  
+  drawActiveSentencesAndFireworks(); 
 }
 
+function drawSingleSentence(sentenceObj, targetCenterY, wordRectsArrayToPopulate, isQuestionContext, fullTranslationString) {
+    if (!sentenceObj) {
+        wordRectsArrayToPopulate.length = 0;
+        return;
+    }
+    wordRectsArrayToPopulate.length = 0;
+
+    ctx.save();
+    ctx.globalAlpha = 1.0; 
+    ctx.font = englishFont;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+
+    let lines = [sentenceObj.line1, sentenceObj.line2].filter(l => l && l.trim());
+    let lineHeight = 30;
+    let englishBlockHeight = lines.length * lineHeight;
+    let yBaseEnglishFirstLine = targetCenterY - englishBlockHeight / 2;
+
+
+    if (isQuestionContext && showPlayButton) { 
+        if (!playButtonRect) {
+            const playSize = 36 * 0.49; const btnPad = 18 * 0.49;
+            playButtonRect = { x: 10, y: 0, w: playSize + btnPad * 2, h: playSize + btnPad * 2};
+        }
+        const playButtonHeight = playButtonRect.h;
+        playButtonRect.y = targetCenterY - playButtonHeight / 2;
+
+
+        ctx.save();
+        ctx.globalAlpha = 0.82; ctx.fillStyle = "#222"; ctx.beginPath();
+        ctx.roundRect(playButtonRect.x, playButtonRect.y, playButtonRect.w, playButtonRect.h, 20 * 0.49);
+        ctx.fill();
+        ctx.globalAlpha = 1; ctx.strokeStyle = "#4CAF50"; ctx.lineWidth = 3 * 0.49; ctx.stroke();
+        ctx.fillStyle = "#4CAF50"; ctx.beginPath();
+        const btnPad = 18 * 0.49; const playSize = 36 * 0.49;
+        ctx.moveTo(playButtonRect.x + btnPad + 6 * 0.49, playButtonRect.y + btnPad);
+        ctx.lineTo(playButtonRect.x + btnPad + 6 * 0.49, playButtonRect.y + playButtonRect.h - btnPad);
+        ctx.lineTo(playButtonRect.x + btnPad + playSize, playButtonRect.y + playButtonRect.h / 2);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+
+    ctx.font = englishFont; 
+    ctx.textBaseline = "middle";
+    let verbColored = false;
+    const currentSentenceFullText = (sentenceObj.line1 + " " + (sentenceObj.line2 || "")).trim();
+    const isCurrentSentenceQFormat = isQuestionSentence(currentSentenceFullText);
+    const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]);
+
+    for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
+        const words = lineText.split(" ");
+        let wordMetrics = words.map(w => ctx.measureText(w));
+        let spaceWidth = ctx.measureText(" ").width;
+        let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
+        let currentX = (canvas.width - totalLineWidth) / 2;
+        let currentY = yBaseEnglishFirstLine + i * lineHeight + lineHeight / 2;
+
+
+        for (let j = 0; j < words.length; j++) {
+            let rawWord = words[j], cleanedWord = rawWord.replace(/[^a-zA-Z']/g, ""), lowerCleanedWord = cleanedWord.toLowerCase();
+            let color = "#fff";
+            if (isCurrentSentenceQFormat && i === 0 && j === 0 && (isAux(lowerCleanedWord) || isWh(lowerCleanedWord))) color = "#40b8ff";
+            else if (isVerb(lowerCleanedWord) && !verbColored) { color = "#FFD600"; verbColored = true; }
+            else if (isAux(lowerCleanedWord) || isBeen(lowerCleanedWord)) color = "#40b8ff";
+            else if (isVing(lowerCleanedWord)) color = "#40b8ff";
+            ctx.fillStyle = color; ctx.fillText(rawWord, currentX, currentY);
+            const measuredWidth = wordMetrics[j].width;
+            wordRectsArrayToPopulate.push({ word: rawWord, x: currentX, y: currentY, w: measuredWidth, h: wordHeight, lineIndex: i, isQuestionContext });
+            currentX += measuredWidth + spaceWidth;
+        }
+    }
+
+    if (isQuestionContext && fullTranslationString) { 
+        ctx.save();
+        const translationFont = "18.9px Arial"; ctx.font = translationFont; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#FFD600"; ctx.shadowColor = "#111"; ctx.shadowBlur = 4;
+        
+        const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
+        const translationBelowY = targetCenterY + englishBlockHeight / 2 + 10 + translationTextHeight / 2;
+        ctx.fillText(fullTranslationString, canvas.width / 2, translationBelowY);
+        ctx.restore();
+    }
+    ctx.restore();
+}
+
+function drawActiveSentencesAndFireworks() {
+    const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
+    // const verticalGapBetweenQACenters = 150; // No longer used for direct positioning
+
+    let qStaticDisplay = questionSentence && !(fireworks && fireworksState.formingSentenceIsQuestion && fireworksState.formingSentenceOriginalIndex === questionSentence.originalIndex);
+    let aStaticDisplay = answerSentence && !(fireworks && !fireworksState.formingSentenceIsQuestion && fireworksState.formingSentenceOriginalIndex === answerSentence.originalIndex);
+
+    if (fireworks && !fireworksState.formingSentenceIsQuestion) {
+        qStaticDisplay = !!questionSentence;
+    }
+
+    let questionActualHeight = 0, answerActualHeight = 0;
+    let questionDisplayY, answerDisplayY;
+
+    if (qStaticDisplay && questionSentence) {
+        questionActualHeight = getSentenceHeight(questionSentence.line1 + " " + (questionSentence.line2 || ""));
+    }
+    if (aStaticDisplay && answerSentence) {
+        answerActualHeight = getSentenceHeight(answerSentence.line1 + " " + (answerSentence.line2 || ""));
+    }
+
+    if (qStaticDisplay && questionSentence) {
+        let baseQY;
+        if (aStaticDisplay && answerSentence) { // Both Q and A are static
+            baseQY = mainRenderAreaYCenter - ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET / 2 - answerActualHeight / 4 + questionActualHeight / 4;
+        } else if (fireworks && !fireworksState.formingSentenceIsQuestion) { // Q is static, Answer is forming
+            const formingAnswerHeight = getSentenceHeight(fireworksState.formingSentenceText);
+            baseQY = mainRenderAreaYCenter - ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET / 2 - formingAnswerHeight / 4 + questionActualHeight / 4;
+        } else { // Q is static and alone
+            baseQY = mainRenderAreaYCenter;
+        }
+        questionDisplayY = baseQY + QUESTION_Y_ADJUST;
+    }
+
+
+    if (aStaticDisplay && answerSentence) {
+        if (qStaticDisplay && questionSentence && questionDisplayY !== undefined) { // Q is also static
+            answerDisplayY = questionDisplayY + ANSWER_BELOW_QUESTION_CENTER_Y_OFFSET;
+        } else { // Answer is static and alone (should be rare if Q always comes first)
+            answerDisplayY = mainRenderAreaYCenter; // Or some other default, adjusted if needed
+        }
+    }
+
+
+    if (qStaticDisplay && questionSentence && questionDisplayY !== undefined) {
+        drawSingleSentence(
+            questionSentence, questionDisplayY, questionWordRects, true,
+            (showTranslation && questionSentence.originalIndex !== null && translations[questionSentence.originalIndex]) ? translations[questionSentence.originalIndex] : null
+        );
+    } else {
+        questionWordRects.length = 0;
+        if (!(fireworks && fireworksState.formingSentenceIsQuestion)) {
+            showPlayButton = false;
+        }
+    }
+
+    if (aStaticDisplay && answerSentence && answerDisplayY !== undefined) {
+        drawSingleSentence(answerSentence, answerDisplayY, answerWordRects, false, null);
+    } else {
+        answerWordRects.length = 0;
+    }
+    
+    if (activeWordTranslation && activeWordTranslation.show) {
+        let targetSentenceCenterY, targetSentenceBlockHeight;
+        // Determine which sentence the word belongs to and its display Y
+        if (activeWordTranslation.isQuestionContext && qStaticDisplay && questionSentence && questionDisplayY !== undefined) {
+            targetSentenceCenterY = questionDisplayY;
+            targetSentenceBlockHeight = questionActualHeight; // Already calculated
+        } else if (!activeWordTranslation.isQuestionContext && aStaticDisplay && answerSentence && answerDisplayY !== undefined) {
+            targetSentenceCenterY = answerDisplayY;
+            targetSentenceBlockHeight = answerActualHeight; // Already calculated
+        }
+
+
+        if (targetSentenceCenterY !== undefined && targetSentenceBlockHeight !== undefined && targetSentenceBlockHeight > 0) {
+            ctx.save();
+            const wordTransFontFamily = "'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif"; const wordTransFontSize = 16;
+            ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            
+            const textMetrics = ctx.measureText(activeWordTranslation.translation);
+            const textWidth = textMetrics.width;
+            const boxPadding = 5;
+            const boxWidth = textWidth + boxPadding * 2;
+            const boxHeight = wordTransFontSize + boxPadding * 2;
+
+            let boxX = activeWordTranslation.x + activeWordTranslation.w / 2 - boxWidth / 2;
+            let boxY;
+
+            if (activeWordTranslation.y < targetSentenceCenterY) { // Word is in upper line of a 2-line sentence or is a 1-line sentence
+                boxY = (targetSentenceCenterY - targetSentenceBlockHeight / 2) - boxHeight - boxPadding;
+            } else { // Word is in lower line of a 2-line sentence
+                boxY = (targetSentenceCenterY + targetSentenceBlockHeight / 2) + boxPadding;
+            }
+            
+            let textY = boxY + boxPadding + wordTransFontSize / 2; 
+
+            if (boxX < 0) boxX = 0;
+            if (boxX + boxWidth > canvas.width) boxX = canvas.width - boxWidth;
+            // Clamp Y position of translation box
+            const minBoxY = topOffset + 5; // Ensure it's below topControls + a small margin
+            const maxBoxY = canvas.height - boxHeight - 5; // Ensure it's above bottom of canvas - a small margin
+            boxY = Math.max(minBoxY, Math.min(boxY, maxBoxY));
+            
+            textY = boxY + boxPadding + wordTransFontSize / 2; // Re-calculate textY after clamping boxY
+
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+            ctx.fillStyle = "#98FB98";
+            ctx.fillText(activeWordTranslation.translation, boxX + boxWidth / 2, textY);
+            ctx.restore();
+        } else {
+            activeWordTranslation.show = false;
+        }
+    }
+
+    if (fireworks) drawFireworks(); 
+}
+
+
 function gameLoop(time) {
-  if (!isGameRunning || isGamePaused) {
-      if (isGamePaused && currentSentenceAudio && !currentSentenceAudio.paused) {
-          // currentSentenceAudio.pause();
-      }
-      return;
-  }
+  if (!isGameRunning || isGamePaused) { return; }
   const delta = time - lastTime;
   lastTime = time;
   update(delta);
@@ -1142,61 +1027,47 @@ document.getElementById('pauseBtn').onclick = togglePause;
 document.getElementById('stopBtn').onclick = stopGame;
 
 function resetGameStateForStartStop() {
-    bullets = []; enemies = []; enemyBullets = [];
+    bullets = []; enemies = [];
     fireworks = null; fireworksState = null;
-    centerSentence = null; centerSentenceIndex = null;
-    sentenceActive = false; centerAlpha = 1.0;
+    
+    questionSentence = null; answerSentence = null;
+    questionWordRects = []; answerWordRects = [];
+    currentSentenceDisplayMode = SentenceDisplayMode.EMPTY;
+    
     showPlayButton = false; playButtonRect = null;
     showTranslation = false;
-
     if (activeWordTranslation) activeWordTranslation.show = false;
     activeWordTranslation = null;
-    if (wordTranslationTimeoutId) {
-        clearTimeout(wordTranslationTimeoutId);
-        wordTranslationTimeoutId = null;
-    }
-    centerSentenceWordRects = [];
+    if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
     isActionLocked = false;
 }
 
-
 function startGame() {
   calculateTopOffset();
-
-  if (!allAssetsReady) {
-    alert("이미지 및 비디오 로딩 중입니다. 잠시 후 다시 시도하세요.");
-    return;
-  }
-  isGameRunning = true;
-  isGamePaused = false;
-  try {
-    bgmAudio.pause();
-    bgmAudio.currentTime = 0;
-  } catch (e) {}
-  bgmIndex = 0;
-  bgmAudio = new Audio(bgmFiles[bgmIndex]);
-  bgmAudio.volume = isMuted ? 0 : 0.05;
-  bgmAudio.loop = false;
+  if (!allAssetsReady) { alert("Assets loading. Try again shortly."); return; }
+  isGameRunning = true; isGamePaused = false;
+  try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch (e) {}
+  bgmIndex = 0; bgmAudio = new Audio(bgmFiles[bgmIndex]);
+  bgmAudio.volume = isMuted ? 0 : 0.05; bgmAudio.loop = false;
   bgmAudio.addEventListener('ended', playNextBgm);
-  bgmAudio.play().catch(e => console.error("BGM play error on start:", e));
+  bgmAudio.play().catch(e => console.error("BGM play error:", e));
 
   if (coffeeSteamVideo && coffeeVideoAssetReady) {
     coffeeSteamVideo.currentTime = 0;
-    const playPromise = coffeeSteamVideo.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {}).catch(error => {
-        console.error("Error attempting to play coffee steam video on start:", error);
-      });
-    }
+    coffeeSteamVideo.play().catch(error => console.error("Coffee video play error:", error));
   }
+  
+  resetGameStateForStartStop(); 
+  sentenceIndex = Number(localStorage.getItem('sentenceIndex') || 0); 
+  if (sentenceIndex >= sentences.length || sentenceIndex < 0 || sentenceIndex % 2 !== 0) {
+    sentenceIndex = 0;
+  }
+  localStorage.setItem('sentenceIndex', sentenceIndex.toString());
 
-  resetGameStateForStartStop();
 
   spawnEnemy(); spawnEnemy();
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
-  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10;
-  player.y = Math.max(topOffset, player.y);
-
+  player.y = Math.max(topOffset, topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10);
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
 }
@@ -1208,20 +1079,11 @@ function togglePause() {
     bgmAudio.pause();
     if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
     window.speechSynthesis.cancel();
-    if (currentSentenceAudio) {
-        currentSentenceAudio.pause();
-    }
+    if (currentSentenceAudio) currentSentenceAudio.pause();
   } else {
     bgmAudio.play().catch(e => console.error("BGM resume error:", e));
-    if (coffeeSteamVideo && coffeeSteamVideo.paused && coffeeVideoAssetReady) {
-        const playPromise = coffeeSteamVideo.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {}).catch(error => console.error("Error resuming coffee steam video:", error));
-        }
-    }
-    if (currentSentenceAudio && currentSentenceAudio.paused) {
-        currentSentenceAudio.play().catch(e => console.error("Sentence audio resume error:", e));
-    }
+    if (coffeeSteamVideo && coffeeSteamVideo.paused && coffeeVideoAssetReady) coffeeSteamVideo.play().catch(e => console.error("Coffee video resume error:", e));
+    if (currentSentenceAudio && currentSentenceAudio.paused) currentSentenceAudio.play().catch(e => console.error("Sentence audio resume error:", e));
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
   }
@@ -1232,183 +1094,121 @@ function stopGame() {
   bgmAudio.pause();
   if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
   window.speechSynthesis.cancel();
-  if (currentSentenceAudio) {
-      currentSentenceAudio.pause();
-      currentSentenceAudio.currentTime = 0;
-      currentSentenceAudio = null;
-  }
-
+  if (currentSentenceAudio) { currentSentenceAudio.pause(); currentSentenceAudio.currentTime = 0; currentSentenceAudio = null; }
   resetGameStateForStartStop();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 const expandedMargin = 10;
-
 function handleCanvasInteraction(clientX, clientY, event) {
-  if (!isGameRunning || isGamePaused) return;
-  if (isActionLocked) return;
+  if (!isGameRunning || isGamePaused || isActionLocked || fireworks) return; 
 
   const isPlayBtnTouched = showPlayButton && playButtonRect &&
-    clientX >= (playButtonRect.x - expandedMargin) &&
-    clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-    clientY >= (playButtonRect.y - expandedMargin) &&
-    clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
+    clientX >= (playButtonRect.x - expandedMargin) && clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+    clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
 
   if (isPlayBtnTouched) {
-    showTranslation = true;
-
-    if (activeWordTranslation) activeWordTranslation.show = false;
-    if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
-    activeWordTranslation = null;
-
-    isActionLocked = true;
-    let idxToPlay = centerSentenceIndex;
-    if (idxToPlay !== null && idxToPlay >= 0 && idxToPlay < sentences.length) {
+    if (questionSentence) { 
+        showTranslation = true; 
+        if (activeWordTranslation) activeWordTranslation.show = false;
+        if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
+        activeWordTranslation = null;
+        isActionLocked = true;
         window.speechSynthesis.cancel();
-        playSentenceAudio(idxToPlay)
-            .catch(err => console.error("Error playing sentence audio from play button:", err));
-    } else {
-        console.warn("Play button touched, but centerSentenceIndex is invalid:", centerSentenceIndex);
+        playSentenceAudio(questionSentence.originalIndex).catch(err => console.error("Error playing Q audio (button):", err));
+        event.preventDefault();
+        setTimeout(() => { isActionLocked = false; }, 200);
     }
-
-    event.preventDefault();
-    setTimeout(() => { isActionLocked = false; }, 200);
     return;
   }
 
-  if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
-    for (const wordRect of centerSentenceWordRects) {
-      if (
-        clientX >= wordRect.x && clientX <= wordRect.x + wordRect.w &&
-        clientY >= wordRect.y - wordRect.h / 2 && clientY <= wordRect.y + wordRect.h / 2
-      ) {
-        window.speechSynthesis.cancel();
-        speakWord(wordRect.word);
-
+  let wordTouched = false;
+  const checkWordTouch = (wordRects, sentenceObj, isQContext) => {
+    if (!sentenceObj) return false;
+    for (const wordRect of wordRects) {
+      if (clientX >= wordRect.x && clientX <= wordRect.x + wordRect.w &&
+          clientY >= wordRect.y - wordRect.h / 2 && clientY <= wordRect.y + wordRect.h / 2) {
+        window.speechSynthesis.cancel(); speakWord(wordRect.word);
         if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
         if (activeWordTranslation) activeWordTranslation.show = false;
-        activeWordTranslation = null;
-
         getWordTranslation(wordRect.word).then(translation => {
-            activeWordTranslation = {
-                word: wordRect.word,
-                translation: translation,
-                x: wordRect.x,
-                y: wordRect.y,
-                w: wordRect.w,
-                h: wordRect.h,
-                lineIndex: wordRect.lineIndex,
-                show: true
-            };
-            wordTranslationTimeoutId = setTimeout(() => {
-                if (activeWordTranslation && activeWordTranslation.word === wordRect.word) {
-                    activeWordTranslation.show = false;
-                }
-            }, WORD_TRANSLATION_DURATION);
-        }).catch(err => {
-            console.error("Error getting word translation:", err);
-        });
-
-        showTranslation = false;
-
-        isActionLocked = true;
-        event.preventDefault();
+          activeWordTranslation = { ...wordRect, translation, show: true, isQuestionContext: isQContext };
+        }).catch(err => console.error("Word translation error:", err));
+        showTranslation = false; 
+        isActionLocked = true; event.preventDefault();
         setTimeout(() => { isActionLocked = false; }, 200);
-        return;
+        return true;
       }
     }
+    return false;
+  };
+
+  if (questionSentence && (currentSentenceDisplayMode === SentenceDisplayMode.QUESTION_DISPLAYED || currentSentenceDisplayMode === SentenceDisplayMode.ANSWER_FORMING || currentSentenceDisplayMode === SentenceDisplayMode.BOTH_DISPLAYED)) {
+      if (checkWordTouch(questionWordRects, questionSentence, true)) { wordTouched = true; }
   }
+  if (!wordTouched && answerSentence && currentSentenceDisplayMode === SentenceDisplayMode.BOTH_DISPLAYED) {
+      if (checkWordTouch(answerWordRects, answerSentence, false)) { wordTouched = true; }
+  }
+  if (wordTouched) return;
+
 
   if (activeWordTranslation && activeWordTranslation.show) {
     activeWordTranslation.show = false;
-    if (wordTranslationTimeoutId) {
-        clearTimeout(wordTranslationTimeoutId);
-        wordTranslationTimeoutId = null;
-    }
+    if (wordTranslationTimeoutId) { clearTimeout(wordTranslationTimeoutId); wordTranslationTimeoutId = null; }
   }
-  showTranslation = false;
+  showTranslation = false; 
 
-  player.x = clientX - player.w / 2;
-  player.y = clientY - player.h / 2;
+  player.x = clientX - player.w / 2; player.y = clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
-
   bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 });
   sounds.shoot.play();
-
   event.preventDefault();
 }
 
-
-canvas.addEventListener('touchstart', e => {
-  const touch = e.touches[0];
-  handleCanvasInteraction(touch.clientX, touch.clientY, e);
-}, { passive: false });
-
-canvas.addEventListener('mousedown', e => {
-  handleCanvasInteraction(e.clientX, e.clientY, e);
-});
-
+canvas.addEventListener('touchstart', e => { const touch = e.touches[0]; handleCanvasInteraction(touch.clientX, touch.clientY, e); }, { passive: false });
+canvas.addEventListener('mousedown', e => { handleCanvasInteraction(e.clientX, e.clientY, e); });
 
 canvas.addEventListener('touchmove', e => {
-  if (!isGameRunning || isGamePaused) return;
-  if (isActionLocked) return;
-
+  if (!isGameRunning || isGamePaused || isActionLocked || fireworks) return;
   const touch = e.touches[0];
-
+  
   if (showPlayButton && playButtonRect &&
-      touch.clientX >= (playButtonRect.x - expandedMargin) &&
-      touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-      touch.clientY >= (playButtonRect.y - expandedMargin) &&
-      touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
+      touch.clientX >= (playButtonRect.x - expandedMargin) && touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+      touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
     return;
   }
-
-  if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
-    for (const wordRect of centerSentenceWordRects) {
-      if (
-        touch.clientX >= wordRect.x && touch.clientX <= wordRect.x + wordRect.w &&
-        touch.clientY >= wordRect.y - wordRect.h/2 && touch.clientY <= wordRect.y + wordRect.h/2
-      ) {
-        return;
-      }
+  for (const wr of [...questionWordRects, ...answerWordRects]) { 
+    if (touch.clientX >= wr.x && touch.clientX <= wr.x + wr.w && 
+        touch.clientY >= wr.y - wr.h/2 && touch.clientY <= wr.y + wr.h/2) {
+      return;
     }
   }
 
-  player.x = touch.clientX - player.w / 2;
-  player.y = touch.clientY - player.h / 2;
+  player.x = touch.clientX - player.w / 2; player.y = touch.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
   e.preventDefault();
 }, { passive: false });
 
 canvas.addEventListener('mousemove', e => {
-  if (!isGameRunning || isGamePaused) return;
-  if (isActionLocked && (e.buttons !== 1) ) return;
+  if (!isGameRunning || isGamePaused || fireworks) return; 
+  if (isActionLocked && (e.buttons !== 1)) return;
 
-  if (e.buttons !== 1) {
-    if (showPlayButton && playButtonRect &&
-        e.clientX >= (playButtonRect.x - expandedMargin) &&
-        e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-        e.clientY >= (playButtonRect.y - expandedMargin) &&
-        e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
+  if (e.buttons !== 1) { 
+    if (showPlayButton && playButtonRect && 
+        e.clientX >= (playButtonRect.x - expandedMargin) && e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
+        e.clientY >= (playButtonRect.y - expandedMargin) && e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
       return;
     }
-
-     if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
-      for (const wordRect of centerSentenceWordRects) {
-        if (
-          e.clientX >= wordRect.x && e.clientX <= wordRect.x + wordRect.w &&
-          e.clientY >= wordRect.y - wordRect.h/2 && e.clientY <= wordRect.y + wordRect.h/2
-        ) {
-          return;
-        }
+    for (const wr of [...questionWordRects, ...answerWordRects]) { 
+      if (e.clientX >= wr.x && e.clientX <= wr.x + wr.w && 
+          e.clientY >= wr.y - wr.h/2 && e.clientY <= wr.y + wr.h/2) {
+        return;
       }
     }
   }
-
-  player.x = e.clientX - player.w / 2;
-  player.y = e.clientY - player.h / 2;
+  player.x = e.clientX - player.w / 2; player.y = e.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
 });
