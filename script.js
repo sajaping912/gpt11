@@ -17,7 +17,7 @@ function calculateTopOffset() {
   }
 }
 // Initial calculation attempt. More reliable calculation in startGame and resize.
-calculateTopOffset(); 
+calculateTopOffset();
 // --- END: New variable and function for top offset calculation ---
 
 
@@ -27,12 +27,12 @@ window.addEventListener('resize', () => {
   calculateTopOffset(); // Recalculate offset on resize
 });
 
-// --- START: 새로운 96개 영어 문장 ---
+// --- START: 새로운 96개 영어 문장 (수정됨) ---
 const sentences = [
   "What will we build with these big boxes?", // 1.txt
   "We will make a spaceship for our trip.", // 2.txt
-  "When will they come to the backyard party?", // 3.txt
-  "I will wear it because we fight monsters.", // 4.txt - 원본 파일 3.txt의 내용 다음에 4.txt의 내용이 와야하는데, 순서가 섞여있어 4.txt의 내용으로 가정합니다. (원문 파일 순서대로라면 이 문장은 4번이 아닙니다) - 이 부분은 제공된 txt 파일 순서대로 다시 정렬했습니다.
+  "Why will you wear your superhero costume today?", // 3.txt (수정됨)
+  "I will wear it because we fight monsters.", // 4.txt
   "When will they come to the backyard party?", // 5.txt
   "They will come right after their nap time.", // 6.txt
   "Where will you hide the birthday surprise gift?", // 7.txt
@@ -128,14 +128,14 @@ const sentences = [
 ];
 // --- END: 새로운 96개 영어 문장 ---
 
-// --- START: 새로운 96개 한국어 번역 (자리 표시자) ---
+// --- START: 새로운 96개 한국어 번역 (일부 수정됨) ---
 // 중요: 아래 번역은 실제 번역문으로 교체해야 합니다!
 // sentences 배열의 각 영어 문장에 맞춰 순서대로 한국어 번역을 입력해주세요.
 const translations = [
   "이 큰 상자들로 무엇을 만들 건가요?", // 1.txt 번역 예시
   "우리는 여행을 위한 우주선을 만들 거예요.", // 2.txt 번역 예시
-  "그들은 언제 뒷마당 파티에 올 건가요?", // 3.txt 번역 예시
-  "우리가 괴물과 싸우니까 그걸 입을 거예요.", // 4.txt 번역 예시 (원문 파일 순서대로라면 4번이 아님)
+  "오늘 왜 슈퍼히어로 의상을 입을 건가요?", // 3.txt 번역 (수정됨)
+  "우리가 괴물과 싸우니까 그걸 입을 거예요.", // 4.txt 번역 예시
   "그들은 언제 뒷마당 파티에 올 건가요?", // 5.txt 번역 예시
   "낮잠 시간 바로 후에 올 거예요.", // 6.txt 번역 예시
   "생일 깜짝 선물은 어디에 숨길 건가요?", // 7.txt 번역 예시
@@ -612,7 +612,7 @@ async function speakWord(word) {
       window.speechSynthesis.getVoices(); // 일부 브라우저에서는 호출해야 voiceschanged 이벤트 발생
     });
   }
-  
+
   return new Promise(async resolve => {
     const utter = new window.SpeechSynthesisUtterance(cleanWord);
     utter.lang = 'en-US';
@@ -646,9 +646,9 @@ function drawCenterSentence() {
   const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
 
   let lines = [centerSentence.line1, centerSentence.line2];
-  let lineHeight = 30; 
+  let lineHeight = 30;
   let englishBlockHeight = lines.filter(l => l && l.trim()).length * lineHeight;
-  
+
   let yBaseEnglishFirstLine = mainRenderAreaYCenter - englishBlockHeight / 2;
 
   const translationFont = "18.9px Arial";
@@ -657,15 +657,15 @@ function drawCenterSentence() {
   const btnPad = 18 * 0.49;
   const btnH = playSize + btnPad * 2;
   const btnW = playSize + btnPad * 2;
-  
+
   let playButtonCenterY;
-  if (lines.filter(l => l && l.trim()).length > 0) { 
-      playButtonCenterY = yBaseEnglishFirstLine + lineHeight / 2; 
+  if (lines.filter(l => l && l.trim()).length > 0) {
+      playButtonCenterY = yBaseEnglishFirstLine + lineHeight / 2;
   } else {
-      playButtonCenterY = mainRenderAreaYCenter; 
+      playButtonCenterY = mainRenderAreaYCenter;
   }
   const btnY = playButtonCenterY - btnH / 2;
-  const btnX = 10; 
+  const btnX = 10;
   playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
 
   if (showPlayButton) {
@@ -709,7 +709,7 @@ function drawCenterSentence() {
     let wordMetrics = words.map(w => ctx.measureText(w));
     let spaceWidth = ctx.measureText(" ").width;
     let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
-    
+
     // --- MODIFICATION: Center sentence on the entire canvas width ---
     let currentX = (canvas.width - totalLineWidth) / 2;
     // --- END MODIFICATION ---
@@ -759,14 +759,14 @@ function drawCenterSentence() {
     const lastEnglishLineY = yBaseEnglishFirstLine + (lines.filter(l=>l && l.trim()).length - 1) * lineHeight + lineHeight/2;
     const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
     const translationBelowY = lastEnglishLineY + lineHeight/2 + 10 + translationTextHeight / 2;
-    
+
     // --- MODIFICATION: Center translation text on the entire canvas width ---
     const englishBlockCenterX = canvas.width / 2;
     // --- END MODIFICATION ---
 
     ctx.fillText(
       translations[centerSentenceIndex],
-      englishBlockCenterX, 
+      englishBlockCenterX,
       translationBelowY
     );
     ctx.restore();
@@ -881,8 +881,8 @@ function startFireworks(sentence, fx, fy) {
       maxRadius: maxRadius,
       color: color,
       arrived: false,
-      targetX: canvas.width / 2, 
-      targetY: mainRenderAreaYCenter + (partsArr[j].row - (totalActiveLinesInSentence - 1) / 2) * 30 
+      targetX: canvas.width / 2,
+      targetY: mainRenderAreaYCenter + (partsArr[j].row - (totalActiveLinesInSentence - 1) / 2) * 30
     });
   }
   sentenceActive = true;
@@ -917,28 +917,28 @@ function updateFireworks() {
     if (fireworksState.t >= fireworksState.holdDuration) {
       fireworksState.phase = "gather";
       fireworksState.t = 0;
-      centerAlpha = 0; 
+      centerAlpha = 0;
     }
   } else if (fireworksState.phase === "gather") {
     const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1);
     const ease = Math.pow(progress, 2);
 
-    const tempCtx = canvas.getContext('2d'); 
+    const tempCtx = canvas.getContext('2d');
     tempCtx.font = englishFont;
-    
+
     // Play button related constants are not needed for sentence X centering
     // const playSizeGather = 36 * 0.49;
     // const btnPadGather = 18 * 0.49;
     // const btnWGather = playSizeGather + btnPadGather * 2;
-    // const btnXGather = 10; 
+    // const btnXGather = 10;
     // --- START: Removed sentenceStartXOffsetGather calculation for centering ---
-    // const gapAfterPlayButtonGather = 10; 
+    // const gapAfterPlayButtonGather = 10;
     // const sentenceStartXOffsetGather = btnXGather + btnWGather + gapAfterPlayButtonGather;
     // --- END: Removed sentenceStartXOffsetGather calculation for centering ---
 
     const [line1Gather, line2Gather] = splitSentence(nextSentence);
     const gatherLines = [line1Gather, line2Gather];
-    let lineWordArrays = []; 
+    let lineWordArrays = [];
     gatherLines.forEach(line => {
         if (line && line.trim()) lineWordArrays.push(line.split(" "));
     });
@@ -949,27 +949,27 @@ function updateFireworks() {
         let wordMetrics = wordsInLine.map(w => tempCtx.measureText(w));
         let spaceWidth = tempCtx.measureText(" ").width;
         let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (wordsInLine.length - 1);
-        
+
         // --- MODIFICATION: Center target X on the entire canvas width ---
         let currentXTargetForLine = (canvas.width - totalLineWidth) / 2;
         // --- END MODIFICATION ---
 
-        let currentYTarget = mainRenderAreaYCenter + (i - (lineWordArrays.length -1) / 2) * 30; 
+        let currentYTarget = mainRenderAreaYCenter + (i - (lineWordArrays.length -1) / 2) * 30;
 
         for (let j = 0; j < wordsInLine.length; j++) {
             if (fireworks[wordIndexInSentence]) {
                 fireworks[wordIndexInSentence].targetX = currentXTargetForLine + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width, 0) + spaceWidth * j;
-                fireworks[wordIndexInSentence].targetY = currentYTarget; 
+                fireworks[wordIndexInSentence].targetY = currentYTarget;
             }
             wordIndexInSentence++;
         }
     }
 
     fireworks.forEach((fw) => {
-      const totalActiveLinesGather = lineWordArrays.length; 
+      const totalActiveLinesGather = lineWordArrays.length;
       fw.targetY = mainRenderAreaYCenter + (fw.row - (totalActiveLinesGather - 1) / 2) * 30;
 
-      fw.x += (fw.targetX - fw.x) * ease * 0.2; 
+      fw.x += (fw.targetX - fw.x) * ease * 0.2;
       fw.y += (fw.targetY - fw.y) * ease * 0.2;
     });
 
@@ -994,11 +994,11 @@ function updateFireworks() {
       centerSentenceWordRects = [];
 
       setTimeout(() => {
-        let idxToPlay = centerSentenceIndex; 
-        window.speechSynthesis.cancel(); 
-        playSentenceAudio(idxToPlay) 
+        let idxToPlay = centerSentenceIndex;
+        window.speechSynthesis.cancel();
+        playSentenceAudio(idxToPlay)
             .catch(err => console.error("Error playing sentence audio from fireworks:", err));
-      }, 800); 
+      }, 800);
     }
   }
 }
@@ -1017,13 +1017,13 @@ async function getVoice(lang = 'en-US', gender = 'female') {
   const filtered = voices.filter(v =>
     v.lang === lang &&
     (gender === 'female'
-      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google us english') 
-      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english')) 
+      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google us english')
+      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english'))
   );
   if (filtered.length) return filtered[0];
-  const fallback = voices.filter(v => v.lang === lang); 
+  const fallback = voices.filter(v => v.lang === lang);
   if (fallback.length) return fallback[0];
-  return voices.find(v => v.default && v.lang.startsWith(lang.split('-')[0])) || voices.find(v => v.default) || voices[0]; 
+  return voices.find(v => v.default && v.lang.startsWith(lang.split('-')[0])) || voices.find(v => v.default) || voices[0];
 }
 
 
@@ -1031,15 +1031,15 @@ function spawnEnemy() {
   const idx = Math.floor(Math.random() * enemyImgs.length);
   const img = enemyImgs[idx];
   const x = Math.random() * (canvas.width - ENEMY_SIZE);
-  const spawnYMax = canvas.height * 0.2; 
-  const y = topOffset + Math.random() * spawnYMax + 20; 
+  const spawnYMax = canvas.height * 0.2;
+  const y = topOffset + Math.random() * spawnYMax + 20;
   enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false, imgIndex: idx });
 }
 
 function update(delta) {
-  enemies = enemies.filter(e => e.y <= canvas.height); 
+  enemies = enemies.filter(e => e.y <= canvas.height);
   while (enemies.length < 2) spawnEnemy();
-  enemies.forEach(e => e.y += 1); 
+  enemies.forEach(e => e.y += 1);
 
   bullets = bullets.filter(b => b.y + b.h > 0).map(b => { b.y -= b.speed; return b; });
   enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
@@ -1048,7 +1048,7 @@ function update(delta) {
     enemies.forEach((e, ei) => {
       if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
         if (!fireworks && !sentenceActive) {
-          nextSentence = sentences[sentenceIndex]; 
+          nextSentence = sentences[sentenceIndex];
           sentenceIndex = (sentenceIndex + 1) % sentences.length;
           localStorage.setItem('sentenceIndex', sentenceIndex);
 
@@ -1065,7 +1065,7 @@ function update(delta) {
 
   if (fireworks) updateFireworks();
 
-  if (!centerSentence && !fireworks) { 
+  if (!centerSentence && !fireworks) {
     showPlayButton = false;
     showTranslation = false;
     if (activeWordTranslation) activeWordTranslation.show = false;
@@ -1079,7 +1079,7 @@ function draw() {
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
-    if (e.imgIndex === 1) { 
+    if (e.imgIndex === 1) {
       const scaleFactor = 1.3;
       const enlargedWidth = ENEMY_SIZE * scaleFactor;
       const enlargedHeight = ENEMY_SIZE * scaleFactor;
@@ -1119,14 +1119,14 @@ function draw() {
 
   ctx.fillStyle = 'red';
   bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-  drawCenterSentence(); 
-  if (fireworks) drawFireworks(); 
+  drawCenterSentence();
+  if (fireworks) drawFireworks();
 }
 
 function gameLoop(time) {
   if (!isGameRunning || isGamePaused) {
       if (isGamePaused && currentSentenceAudio && !currentSentenceAudio.paused) {
-          // currentSentenceAudio.pause(); 
+          // currentSentenceAudio.pause();
       }
       return;
   }
@@ -1191,11 +1191,11 @@ function startGame() {
   }
 
   resetGameStateForStartStop();
-  
-  spawnEnemy(); spawnEnemy(); 
+
+  spawnEnemy(); spawnEnemy();
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
-  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10; 
-  player.y = Math.max(topOffset, player.y); 
+  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10;
+  player.y = Math.max(topOffset, player.y);
 
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
@@ -1208,7 +1208,7 @@ function togglePause() {
     bgmAudio.pause();
     if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
     window.speechSynthesis.cancel();
-    if (currentSentenceAudio) { 
+    if (currentSentenceAudio) {
         currentSentenceAudio.pause();
     }
   } else {
@@ -1219,11 +1219,11 @@ function togglePause() {
             playPromise.then(() => {}).catch(error => console.error("Error resuming coffee steam video:", error));
         }
     }
-    if (currentSentenceAudio && currentSentenceAudio.paused) { 
+    if (currentSentenceAudio && currentSentenceAudio.paused) {
         currentSentenceAudio.play().catch(e => console.error("Sentence audio resume error:", e));
     }
-    lastTime = performance.now(); 
-    requestAnimationFrame(gameLoop); 
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
   }
 }
 
@@ -1232,7 +1232,7 @@ function stopGame() {
   bgmAudio.pause();
   if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
   window.speechSynthesis.cancel();
-  if (currentSentenceAudio) { 
+  if (currentSentenceAudio) {
       currentSentenceAudio.pause();
       currentSentenceAudio.currentTime = 0;
       currentSentenceAudio = null;
@@ -1255,22 +1255,22 @@ function handleCanvasInteraction(clientX, clientY, event) {
     clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
 
   if (isPlayBtnTouched) {
-    showTranslation = true; 
-    
+    showTranslation = true;
+
     if (activeWordTranslation) activeWordTranslation.show = false;
     if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
     activeWordTranslation = null;
-    
+
     isActionLocked = true;
     let idxToPlay = centerSentenceIndex;
     if (idxToPlay !== null && idxToPlay >= 0 && idxToPlay < sentences.length) {
-        window.speechSynthesis.cancel(); 
-        playSentenceAudio(idxToPlay) 
+        window.speechSynthesis.cancel();
+        playSentenceAudio(idxToPlay)
             .catch(err => console.error("Error playing sentence audio from play button:", err));
     } else {
         console.warn("Play button touched, but centerSentenceIndex is invalid:", centerSentenceIndex);
     }
-    
+
     event.preventDefault();
     setTimeout(() => { isActionLocked = false; }, 200);
     return;
@@ -1283,11 +1283,11 @@ function handleCanvasInteraction(clientX, clientY, event) {
         clientY >= wordRect.y - wordRect.h / 2 && clientY <= wordRect.y + wordRect.h / 2
       ) {
         window.speechSynthesis.cancel();
-        speakWord(wordRect.word); 
+        speakWord(wordRect.word);
 
         if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
         if (activeWordTranslation) activeWordTranslation.show = false;
-        activeWordTranslation = null; 
+        activeWordTranslation = null;
 
         getWordTranslation(wordRect.word).then(translation => {
             activeWordTranslation = {
@@ -1301,15 +1301,15 @@ function handleCanvasInteraction(clientX, clientY, event) {
                 show: true
             };
             wordTranslationTimeoutId = setTimeout(() => {
-                if (activeWordTranslation && activeWordTranslation.word === wordRect.word) { 
+                if (activeWordTranslation && activeWordTranslation.word === wordRect.word) {
                     activeWordTranslation.show = false;
                 }
             }, WORD_TRANSLATION_DURATION);
         }).catch(err => {
             console.error("Error getting word translation:", err);
         });
-        
-        showTranslation = false; 
+
+        showTranslation = false;
 
         isActionLocked = true;
         event.preventDefault();
@@ -1331,11 +1331,11 @@ function handleCanvasInteraction(clientX, clientY, event) {
   player.x = clientX - player.w / 2;
   player.y = clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-  player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y)); 
+  player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
 
   bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 });
   sounds.shoot.play();
-  
+
   event.preventDefault();
 }
 
@@ -1353,7 +1353,7 @@ canvas.addEventListener('mousedown', e => {
 canvas.addEventListener('touchmove', e => {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked) return;
-  
+
   const touch = e.touches[0];
 
   if (showPlayButton && playButtonRect &&
@@ -1386,13 +1386,13 @@ canvas.addEventListener('mousemove', e => {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked && (e.buttons !== 1) ) return;
 
-  if (e.buttons !== 1) { 
+  if (e.buttons !== 1) {
     if (showPlayButton && playButtonRect &&
         e.clientX >= (playButtonRect.x - expandedMargin) &&
         e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
         e.clientY >= (playButtonRect.y - expandedMargin) &&
         e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
-      return; 
+      return;
     }
 
      if (centerSentence && showPlayButton && centerSentenceWordRects.length > 0) {
@@ -1405,8 +1405,8 @@ canvas.addEventListener('mousemove', e => {
         }
       }
     }
-  } 
-  
+  }
+
   player.x = e.clientX - player.w / 2;
   player.y = e.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
