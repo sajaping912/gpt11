@@ -640,20 +640,16 @@ function drawCenterSentence() {
   ctx.save();
   ctx.globalAlpha = centerAlpha;
   ctx.font = englishFont;
-  ctx.textAlign = "left";
+  ctx.textAlign = "left"; // Keep left for drawing word by word
   ctx.textBaseline = "middle";
 
-  // --- START: Modified Y calculation to account for topOffset ---
   const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-  // --- END: Modified Y calculation ---
 
   let lines = [centerSentence.line1, centerSentence.line2];
-  let lineHeight = 30; // This remains the spacing between lines
+  let lineHeight = 30; 
   let englishBlockHeight = lines.filter(l => l && l.trim()).length * lineHeight;
   
-  // Use mainRenderAreaYCenter for vertical positioning of the sentence block
   let yBaseEnglishFirstLine = mainRenderAreaYCenter - englishBlockHeight / 2;
-
 
   const translationFont = "18.9px Arial";
 
@@ -662,18 +658,15 @@ function drawCenterSentence() {
   const btnH = playSize + btnPad * 2;
   const btnW = playSize + btnPad * 2;
   
-  // Adjust play button's Y position relative to the new sentence block position
-  // It should be vertically centered with the first line of the (potentially multi-line) sentence.
   let playButtonCenterY;
-  if (lines.filter(l => l && l.trim()).length > 0) { // If there's at least one line
-      playButtonCenterY = yBaseEnglishFirstLine + lineHeight / 2; // Middle of the first line slot
+  if (lines.filter(l => l && l.trim()).length > 0) { 
+      playButtonCenterY = yBaseEnglishFirstLine + lineHeight / 2; 
   } else {
-      playButtonCenterY = mainRenderAreaYCenter; // Fallback if no lines (should not happen if centerSentence exists)
+      playButtonCenterY = mainRenderAreaYCenter; 
   }
   const btnY = playButtonCenterY - btnH / 2;
-  const btnX = 10; // 문장 왼쪽에 배치
+  const btnX = 10; 
   playButtonRect = { x: btnX, y: btnY, w: btnW, h: btnH };
-
 
   if (showPlayButton) {
     ctx.save();
@@ -703,8 +696,10 @@ function drawCenterSentence() {
   const isQ = isQuestion(currentSentenceFullText);
   const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]);
 
-  const sentenceStartXOffset = playButtonRect.x + playButtonRect.w + 20;
-
+  // --- START: Removed sentenceStartXOffset calculation for centering ---
+  // const gapAfterPlayButton = 10; // No longer needed here for sentence centering
+  // const sentenceStartXOffset = playButtonRect.x + playButtonRect.w + gapAfterPlayButton; // No longer needed here for sentence centering
+  // --- END: Removed sentenceStartXOffset calculation for centering ---
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
@@ -715,12 +710,10 @@ function drawCenterSentence() {
     let spaceWidth = ctx.measureText(" ").width;
     let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
     
-    let currentX = (canvas.width - sentenceStartXOffset - totalLineWidth) / 2 + sentenceStartXOffset;
-    if (currentX < sentenceStartXOffset) {
-        currentX = sentenceStartXOffset;
-    }
+    // --- MODIFICATION: Center sentence on the entire canvas width ---
+    let currentX = (canvas.width - totalLineWidth) / 2;
+    // --- END MODIFICATION ---
 
-    // currentY is calculated based on yBaseEnglishFirstLine
     let currentY = yBaseEnglishFirstLine + i * lineHeight + lineHeight/2;
 
     for (let j = 0; j < words.length; j++) {
@@ -758,7 +751,7 @@ function drawCenterSentence() {
   if (showTranslation && centerSentenceIndex !== null && translations[centerSentenceIndex]) {
     ctx.save();
     ctx.font = translationFont;
-    ctx.textAlign = "center";
+    ctx.textAlign = "center"; // Translation is centered
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#FFD600";
     ctx.shadowColor = "#111";
@@ -767,22 +760,9 @@ function drawCenterSentence() {
     const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
     const translationBelowY = lastEnglishLineY + lineHeight/2 + 10 + translationTextHeight / 2;
     
-    let maxEngLineWidth = 0;
-    ctx.font = englishFont; // Switch to English font for measuring
-    for (let i = 0; i < lines.length; i++) {
-        const lineText = lines[i];
-        if (!lineText || !lineText.trim()) continue;
-        const words = lineText.split(" ");
-        let wordMetrics = words.map(w => ctx.measureText(w));
-        let spaceWidth = ctx.measureText(" ").width;
-        let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
-        if (totalLineWidth > maxEngLineWidth) {
-            maxEngLineWidth = totalLineWidth;
-        }
-    }
-    ctx.font = translationFont; // Switch back to translation font
-
-    const englishBlockCenterX = (canvas.width - sentenceStartXOffset - maxEngLineWidth) / 2 + sentenceStartXOffset + maxEngLineWidth / 2;
+    // --- MODIFICATION: Center translation text on the entire canvas width ---
+    const englishBlockCenterX = canvas.width / 2;
+    // --- END MODIFICATION ---
 
     ctx.fillText(
       translations[centerSentenceIndex],
@@ -857,10 +837,10 @@ function startFireworks(sentence, fx, fy) {
   activeWordTranslation = null;
 
   const [line1, line2] = splitSentence(sentence);
-  const lines = [line1, line2];
+  const linesArr = [line1, line2]; // Renamed to avoid conflict
   let partsArr = [];
-  let totalLines = lines.filter(line => line && line.trim().length > 0).length;
-  lines.forEach((line, i) => {
+  let totalActiveLinesInSentence = linesArr.filter(line => line && line.trim().length > 0).length; // Renamed
+  linesArr.forEach((line, i) => {
     if (!line || !line.trim()) return;
     const parts = line.split(" ");
     partsArr = partsArr.concat(parts.map(word => ({ word, row: i })));
@@ -874,9 +854,7 @@ function startFireworks(sentence, fx, fy) {
   if (centerX - maxRadius < margin) centerX = margin + maxRadius;
   if (centerX + maxRadius > canvas.width - margin) centerX = canvas.width - margin - maxRadius;
 
-  // --- START: Use mainRenderAreaYCenter for fireworks target Y calculation ---
   const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-  // --- END: Use mainRenderAreaYCenter ---
 
   fireworks = [];
   fireworksState = {
@@ -903,9 +881,8 @@ function startFireworks(sentence, fx, fy) {
       maxRadius: maxRadius,
       color: color,
       arrived: false,
-      targetX: canvas.width / 2, // Initial target X (will be refined in updateFireworks)
-      // Use mainRenderAreaYCenter for targetY
-      targetY: mainRenderAreaYCenter + (partsArr[j].row - (totalLines - 1) / 2) * 30 // 30 is lineHeight
+      targetX: canvas.width / 2, 
+      targetY: mainRenderAreaYCenter + (partsArr[j].row - (totalActiveLinesInSentence - 1) / 2) * 30 
     });
   }
   sentenceActive = true;
@@ -917,10 +894,7 @@ function updateFireworks() {
   if (!fireworks) return false;
 
   fireworksState.t++;
-  // --- START: Use mainRenderAreaYCenter for fireworks gather target Y calculation ---
   const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-  // --- END: Use mainRenderAreaYCenter ---
-
 
   if (fireworksState.phase === "explode") {
     const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1);
@@ -952,12 +926,15 @@ function updateFireworks() {
     const tempCtx = canvas.getContext('2d'); 
     tempCtx.font = englishFont;
     
-    // Determine play button width for sentence start X offset calculation
-    const playSizeGather = 36 * 0.49;
-    const btnPadGather = 18 * 0.49;
-    const btnWGather = playSizeGather + btnPadGather * 2;
-    const sentenceStartXOffsetGather = 10 + btnWGather + 20; // Matches drawCenterSentence logic: btnX + btnW + 20
-
+    // Play button related constants are not needed for sentence X centering
+    // const playSizeGather = 36 * 0.49;
+    // const btnPadGather = 18 * 0.49;
+    // const btnWGather = playSizeGather + btnPadGather * 2;
+    // const btnXGather = 10; 
+    // --- START: Removed sentenceStartXOffsetGather calculation for centering ---
+    // const gapAfterPlayButtonGather = 10; 
+    // const sentenceStartXOffsetGather = btnXGather + btnWGather + gapAfterPlayButtonGather;
+    // --- END: Removed sentenceStartXOffsetGather calculation for centering ---
 
     const [line1Gather, line2Gather] = splitSentence(nextSentence);
     const gatherLines = [line1Gather, line2Gather];
@@ -966,7 +943,6 @@ function updateFireworks() {
         if (line && line.trim()) lineWordArrays.push(line.split(" "));
     });
 
-
     let wordIndexInSentence = 0;
     for (let i = 0; i < lineWordArrays.length; i++) {
         const wordsInLine = lineWordArrays[i];
@@ -974,29 +950,24 @@ function updateFireworks() {
         let spaceWidth = tempCtx.measureText(" ").width;
         let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (wordsInLine.length - 1);
         
-        let currentXTargetBase = (canvas.width - sentenceStartXOffsetGather - totalLineWidth) / 2 + sentenceStartXOffsetGather;
-        if (currentXTargetBase < sentenceStartXOffsetGather) {
-            currentXTargetBase = sentenceStartXOffsetGather;
-        }
+        // --- MODIFICATION: Center target X on the entire canvas width ---
+        let currentXTargetForLine = (canvas.width - totalLineWidth) / 2;
+        // --- END MODIFICATION ---
 
-        // Calculate Y target using mainRenderAreaYCenter and lineHeight (30)
         let currentYTarget = mainRenderAreaYCenter + (i - (lineWordArrays.length -1) / 2) * 30; 
 
         for (let j = 0; j < wordsInLine.length; j++) {
             if (fireworks[wordIndexInSentence]) {
-                fireworks[wordIndexInSentence].targetX = currentXTargetBase + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width, 0) + spaceWidth * j;
-                fireworks[wordIndexInSentence].targetY = currentYTarget; // This line already uses the correct Y logic structure
+                fireworks[wordIndexInSentence].targetX = currentXTargetForLine + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width, 0) + spaceWidth * j;
+                fireworks[wordIndexInSentence].targetY = currentYTarget; 
             }
             wordIndexInSentence++;
         }
     }
 
-
     fireworks.forEach((fw) => {
-      // Update targetY for each firework particle to ensure it uses the mainRenderAreaYCenter
-      const totalActiveLines = lineWordArrays.length; // Number of actual lines being formed
-      fw.targetY = mainRenderAreaYCenter + (fw.row - (totalActiveLines - 1) / 2) * 30;
-
+      const totalActiveLinesGather = lineWordArrays.length; 
+      fw.targetY = mainRenderAreaYCenter + (fw.row - (totalActiveLinesGather - 1) / 2) * 30;
 
       fw.x += (fw.targetX - fw.x) * ease * 0.2; 
       fw.y += (fw.targetY - fw.y) * ease * 0.2;
@@ -1046,35 +1017,27 @@ async function getVoice(lang = 'en-US', gender = 'female') {
   const filtered = voices.filter(v =>
     v.lang === lang &&
     (gender === 'female'
-      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google us english') // 좀 더 일반적인 여성 음성 이름 추가
-      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english')) // 남성 음성도 추가
+      ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google us english') 
+      : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english')) 
   );
   if (filtered.length) return filtered[0];
-  const fallback = voices.filter(v => v.lang === lang); // 언어만 맞는 것
+  const fallback = voices.filter(v => v.lang === lang); 
   if (fallback.length) return fallback[0];
-  return voices.find(v => v.default && v.lang.startsWith(lang.split('-')[0])) || voices.find(v => v.default) || voices[0]; // 기본 음성
+  return voices.find(v => v.default && v.lang.startsWith(lang.split('-')[0])) || voices.find(v => v.default) || voices[0]; 
 }
 
-// speakSentence 함수는 이제 사용하지 않으므로 주석 처리 또는 삭제 가능
-/*
-async function speakSentence(text, gender = 'female') {
-  // ... (이전 speakSentence 내용) ...
-}
-*/
 
 function spawnEnemy() {
   const idx = Math.floor(Math.random() * enemyImgs.length);
   const img = enemyImgs[idx];
   const x = Math.random() * (canvas.width - ENEMY_SIZE);
-  // --- Modified enemy spawn Y to be below topOffset ---
-  const spawnYMax = canvas.height * 0.2; // Original relative spawn height
-  const y = topOffset + Math.random() * spawnYMax + 20; // Ensure enemies spawn below controls
-  // --- End modified enemy spawn Y ---
+  const spawnYMax = canvas.height * 0.2; 
+  const y = topOffset + Math.random() * spawnYMax + 20; 
   enemies.push({ x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false, imgIndex: idx });
 }
 
 function update(delta) {
-  enemies = enemies.filter(e => e.y <= canvas.height); // Enemies can go off bottom
+  enemies = enemies.filter(e => e.y <= canvas.height); 
   while (enemies.length < 2) spawnEnemy();
   enemies.forEach(e => e.y += 1); 
 
@@ -1116,7 +1079,7 @@ function draw() {
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
-    if (e.imgIndex === 1) { // Coffee cup enemy
+    if (e.imgIndex === 1) { 
       const scaleFactor = 1.3;
       const enlargedWidth = ENEMY_SIZE * scaleFactor;
       const enlargedHeight = ENEMY_SIZE * scaleFactor;
@@ -1163,7 +1126,7 @@ function draw() {
 function gameLoop(time) {
   if (!isGameRunning || isGamePaused) {
       if (isGamePaused && currentSentenceAudio && !currentSentenceAudio.paused) {
-          // currentSentenceAudio.pause(); // Handled by togglePause
+          // currentSentenceAudio.pause(); 
       }
       return;
   }
@@ -1198,9 +1161,7 @@ function resetGameStateForStartStop() {
 
 
 function startGame() {
-  // --- START: Ensure topOffset is calculated before game starts ---
   calculateTopOffset();
-  // --- END: Ensure topOffset is calculated ---
 
   if (!allAssetsReady) {
     alert("이미지 및 비디오 로딩 중입니다. 잠시 후 다시 시도하세요.");
@@ -1231,11 +1192,10 @@ function startGame() {
 
   resetGameStateForStartStop();
   
-  spawnEnemy(); spawnEnemy(); // Initial enemies
-  // Adjust player's initial Y position to be within the main render area
+  spawnEnemy(); spawnEnemy(); 
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
-  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10; // Bottom of render area
-  player.y = Math.max(topOffset, player.y); // Ensure player is not above topOffset
+  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10; 
+  player.y = Math.max(topOffset, player.y); 
 
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
@@ -1287,12 +1247,6 @@ const expandedMargin = 10;
 function handleCanvasInteraction(clientX, clientY, event) {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked) return;
-
-  // --- Adjust clientY to be relative to canvas top if topOffset exists ---
-  // No, clientX/Y are already relative to viewport, matching canvas coordinates.
-  // Only elements *within* canvas that need to respect topOffset should use it.
-  // Player Y bounds check will ensure it stays within visible area.
-  // ---
 
   const isPlayBtnTouched = showPlayButton && playButtonRect &&
     clientX >= (playButtonRect.x - expandedMargin) &&
@@ -1376,9 +1330,8 @@ function handleCanvasInteraction(clientX, clientY, event) {
 
   player.x = clientX - player.w / 2;
   player.y = clientY - player.h / 2;
-  // Ensure player stays within game boundaries, respecting topOffset
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-  player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y)); // Player cannot go above topOffset
+  player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y)); 
 
   bullets.push({ x: player.x + player.w / 2 - 2.5, y: player.y, w: 5, h: 10, speed: 2.1 });
   sounds.shoot.play();
@@ -1425,7 +1378,6 @@ canvas.addEventListener('touchmove', e => {
   player.x = touch.clientX - player.w / 2;
   player.y = touch.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-  // Ensure player stays within game boundaries, respecting topOffset
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
   e.preventDefault();
 }, { passive: false });
@@ -1434,13 +1386,12 @@ canvas.addEventListener('mousemove', e => {
   if (!isGameRunning || isGamePaused) return;
   if (isActionLocked && (e.buttons !== 1) ) return;
 
-  if (e.buttons !== 1) { // Only check for hover if mouse button is not pressed
+  if (e.buttons !== 1) { 
     if (showPlayButton && playButtonRect &&
         e.clientX >= (playButtonRect.x - expandedMargin) &&
         e.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
         e.clientY >= (playButtonRect.y - expandedMargin) &&
         e.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin)) {
-      // Potentially change cursor or hover effect, but don't block movement
       return; 
     }
 
@@ -1450,21 +1401,18 @@ canvas.addEventListener('mousemove', e => {
           e.clientX >= wordRect.x && e.clientX <= wordRect.x + wordRect.w &&
           e.clientY >= wordRect.y - wordRect.h/2 && e.clientY <= wordRect.y + wordRect.h/2
         ) {
-          // Potentially change cursor or hover effect
           return;
         }
       }
     }
-  } // If button is pressed (e.buttons === 1), this block is skipped, allowing player movement below.
+  } 
   
   player.x = e.clientX - player.w / 2;
   player.y = e.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-  // Ensure player stays within game boundaries, respecting topOffset
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
 });
 
-// Call calculateTopOffset after the DOM is fully loaded to get accurate offsetHeight
 window.addEventListener('load', () => {
     calculateTopOffset();
 });
